@@ -317,4 +317,16 @@ class Evento extends Model
     {
         return $this->destinatarios()->whereNotNull('correo')->where('acepta_correos', true);
     }
+
+    /** Quienes pidieron no recibir correos tampoco reciben WhatsApp. */
+    public function destinatariosConTelefono(): Builder
+    {
+        return $this->destinatarios()->whereNotNull('telefono')->where('telefono', '!=', '')->where('acepta_correos', true);
+    }
+
+    /** Destinatarios a los que se puede escribir por el canal indicado (Invitacion::CORREO o ::WHATSAPP). */
+    public function destinatariosPor(string $canal): Builder
+    {
+        return $canal === Invitacion::WHATSAPP ? $this->destinatariosConTelefono() : $this->destinatariosConCorreo();
+    }
 }

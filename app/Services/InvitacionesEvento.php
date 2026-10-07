@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\EnviarCorreoEvento;
+use App\Jobs\EnviarWhatsAppEvento;
 use App\Models\Contacto;
 use App\Models\Envio;
 use App\Models\Evento;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Decide a quién se escribe en cada caso y despacha los correos de un evento.
+ * Decide a quién se escribe en cada caso y despacha los correos y mensajes de WhatsApp de un evento.
  */
 class InvitacionesEvento
 {
@@ -64,31 +65,33 @@ class InvitacionesEvento
         return self::TEXTOS[$motivo] ?? self::TEXTOS_AUTOMATICOS['sin_respuesta'];
     }
 
-    /** Destinatarios con correo que todavía no tienen invitación a este evento. */
-    public function porInvitar(): Builder
+    /** Destinatarios con correo (o teléfono) que todavía no recibieron la invitación por ese canal. */
+    public function porInvitar(string $canal = Invitacion::CORREO): Builder
     {
-        return $this->evento->destinatariosConCorreo()
-            ->whereDoesntHave('invitaciones', fn ($q) => $q->where('evento_id', $this->evento->id)
-                ->where('estado_envio', '!=', Invitacion::NO_ENVIADA));
+        return $this->evento->destinatariosPor($canal)
+            ->whereDoesntHave('invitaciones', fn ($q) => $q->where('evento_id', $this->evento->id)->whereNotNull($canal.'_estado'));
     }
 
     /** Invitaciones enviadas que aún no tienen respuesta. */
-    public function porRecordar(): Builder
+    public function porRecordar(string $canal = Invitacion::CORREO): Builder
     {
-        return $this->recordables()->whereNull('respuesta');
+        return $this->recordables($canal)->whereNull('respuesta');
     }
 
     /** Invitaciones enviadas de quienes confirmaron. */
-    public function confirmadosPorRecordar(): Builder
+    public function confirmadosPorRecordar(string $canal = Invitacion::CORREO): Builder
     {
-        return $this->recordables()->where('respuesta', Invitacion::CONFIRMADA);
+        return $this->recordables($canal)->where('respuesta', Invitacion::CONFIRMADA);
     }
 
-    private function recordables(): Builder
+    /** Invitadas (por cualquier canal) a las que se puede escribir por $canal. */
+    private function recordables(string $canal): Builder
     {
+        $campo = $canal === Invitacion::WHATSAPP ? 'telefono' : 'correo';
+
         return $this->evento->invitaciones()->getQuery()
             ->where('estado_envio', Invitacion::ENVIADA)
-            ->whereHas('contacto', fn ($q) => $q->where('acepta_correos', true));
+            ->whereHas('contacto', fn ($q) => $q->activos()->where('acepta_correos', true)->whereNotNull($campo)->where($campo, '!=', ''));
     }
 
     /** Invitaciones a quienes avisar de un cambio o una cancelación (no a quienes dijeron que no irán). */
@@ -97,24 +100,23 @@ class InvitacionesEvento
         return $this->evento->invitaciones()->getQuery()
             ->where('estado_envio', Invitacion::ENVIADA)
             ->where(fn ($q) => $q->whereNull('respuesta')->orWhere('respuesta', Invitacion::CONFIRMADA))
-            ->whereHas('contacto', fn ($q) => $q->where('acepta_correos', true));
+            ->whereHas('contacto', fn ($q) => $q->activos()->where('acepta_correos', true));
     }
 
-    public function invitar(string $asunto, string $mensaje, ?User $usuario): int
+    public function invitar(string $asunto, string $mensaje, ?User $usuario, string $canal = Invitacion::CORREO): int
     {
-        $contactos = $this->porInvitar()->get();
+        $contactos = $this->porInvitar($canal)->get();
         if ($contactos->isEmpty()) {
             return 0;
         }
 
-        // Si ya estaba en la lista de asistencia (sin correo en ese momento), se reutiliza su registro
-        $invitaciones = DB::transaction(fn () => $contactos->map(fn (Contacto $c) => Invitacion::updateOrCreate(
-            ['evento_id' => $this->evento->id, 'contacto_id' => $c->id],
-            ['correo' => $c->correo, 'estado_envio' => Invitacion::PENDIENTE],
-        )));
+        // Si ya tenía registro (invitado por el otro canal o en la lista de asistencia), se reutiliza
+        $invitaciones = DB::transaction(fn () => $contactos->map(
+            fn (Contacto $c) => Invitacion::prepararCanal($this->evento, $c, $canal)
+        ));
 
-        $this->registrarEnvio('invitacion', $asunto, $mensaje, $invitaciones->count(), $usuario);
-        $invitaciones->each(fn (Invitacion $i) => $this->despachar($i, 'invitacion', $asunto, $mensaje));
+        $this->registrarEnvio('invitacion', $canal, $asunto, $mensaje, $invitaciones->count(), $usuario);
+        $invitaciones->each(fn (Invitacion $i) => $this->despachar($i, $canal, 'invitacion', $asunto, $mensaje));
 
         return $invitaciones->count();
     }
@@ -124,16 +126,16 @@ class InvitacionesEvento
      * $textos = ['sin_respuesta' => ['asunto' => …, 'mensaje' => …], 'confirmados' => [...]].
      * Solo se escribe a los grupos incluidos en $textos. Devuelve [confirmados, sin respuesta].
      */
-    public function recordar(array $textos, ?User $usuario): array
+    public function recordar(array $textos, ?User $usuario, string $canal = Invitacion::CORREO): array
     {
         $grupos = [
-            'confirmados' => isset($textos['confirmados']) ? $this->confirmadosPorRecordar()->get() : collect(),
-            'sin_respuesta' => isset($textos['sin_respuesta']) ? $this->porRecordar()->get() : collect(),
+            'confirmados' => isset($textos['confirmados']) ? $this->confirmadosPorRecordar($canal)->get() : collect(),
+            'sin_respuesta' => isset($textos['sin_respuesta']) ? $this->porRecordar($canal)->get() : collect(),
         ];
 
         foreach ($grupos as $clave => $invitaciones) {
             if ($invitaciones->isNotEmpty()) {
-                $this->enviarA($invitaciones, 'recordatorio', $textos[$clave]['asunto'], $textos[$clave]['mensaje'], $usuario);
+                $this->enviarA($invitaciones, $canal, 'recordatorio', $textos[$clave]['asunto'], $textos[$clave]['mensaje'], $usuario);
             }
         }
 
@@ -144,7 +146,10 @@ class InvitacionesEvento
         return [$grupos['confirmados']->count(), $grupos['sin_respuesta']->count()];
     }
 
-    /** $nota se agrega al final del mensaje (por ejemplo, la fecha anterior y el motivo de una posposición). */
+    /**
+     * Aviso de cambio, posposición o cancelación, por los mismos canales por los que se invitó a cada persona.
+     * $nota se agrega al final del mensaje (por ejemplo, la fecha anterior y el motivo de una posposición).
+     */
     public function avisar(string $motivo, ?User $usuario, ?string $asunto = null, ?string $mensaje = null, ?string $nota = null): int
     {
         $texto = self::TEXTOS[$motivo];
@@ -156,12 +161,16 @@ class InvitacionesEvento
             $mensaje .= "\n\nMotivo: {$this->evento->motivo_cancelacion}";
         }
 
-        return $this->enviarA($this->porAvisar()->get(), $motivo, $asunto ?? $texto['asunto'], $mensaje, $usuario);
+        $invitaciones = $this->porAvisar()->get();
+        $this->enviarPorSusCanales($invitaciones, $motivo, $motivo, $asunto ?? $texto['asunto'], $mensaje, $usuario);
+
+        return $invitaciones->count();
     }
 
     /**
      * Recordatorio automático (lo lanza la tarea programada). No se envía a quienes dijeron que no,
      * ni a quienes fueron invitados después del momento del recordatorio (ya recibieron su invitación reciente).
+     * Va por los mismos canales por los que se invitó a cada persona.
      * Devuelve [confirmados, sin respuesta] a quienes se escribió.
      */
     public function recordatorioAutomatico(): array
@@ -170,7 +179,7 @@ class InvitacionesEvento
         $base = fn () => $this->evento->invitaciones()->getQuery()
             ->where('estado_envio', Invitacion::ENVIADA)
             ->where('enviada_at', '<', $momento)
-            ->whereHas('contacto', fn ($q) => $q->where('acepta_correos', true));
+            ->whereHas('contacto', fn ($q) => $q->activos()->where('acepta_correos', true));
 
         $grupos = [
             'confirmados' => $base()->where('respuesta', Invitacion::CONFIRMADA)->get(),
@@ -179,10 +188,7 @@ class InvitacionesEvento
 
         foreach ($grupos as $clave => $invitaciones) {
             $texto = self::TEXTOS_AUTOMATICOS[$clave];
-            if ($invitaciones->isNotEmpty()) {
-                $this->registrarEnvio('recordatorio_auto', $texto['asunto'], $texto['mensaje'], $invitaciones->count(), null);
-            }
-            $invitaciones->each(fn (Invitacion $i) => $this->despachar($i, 'recordatorio', $texto['asunto'], $texto['mensaje']));
+            $this->enviarPorSusCanales($invitaciones, 'recordatorio', 'recordatorio_auto', $texto['asunto'], $texto['mensaje'], null);
         }
 
         $this->evento->forceFill(['recordatorio_enviado_at' => now()])->save();
@@ -190,46 +196,62 @@ class InvitacionesEvento
         return [$grupos['confirmados']->count(), $grupos['sin_respuesta']->count()];
     }
 
-    /** Vuelve a enviar la invitación a una persona (p. ej. después de corregir su correo). */
-    public function reenviar(Invitacion $invitacion, ?User $usuario): void
+    /** Vuelve a enviar la invitación a una persona (p. ej. después de corregir su correo o su teléfono). */
+    public function reenviar(Invitacion $invitacion, ?User $usuario, string $canal = Invitacion::CORREO): void
     {
-        $invitacion->update([
-            'correo' => $invitacion->contacto->correo ?? $invitacion->correo,
-            'estado_envio' => Invitacion::PENDIENTE, 'error' => null,
-        ]);
+        $invitacion = Invitacion::prepararCanal($this->evento, $invitacion->contacto, $canal);
         $texto = self::textoPorDefecto('invitacion', $this->evento);
-        $this->registrarEnvio('invitacion', $texto['asunto'], $texto['mensaje'], 1, $usuario);
-        $this->despachar($invitacion, 'invitacion', $texto['asunto'], $texto['mensaje']);
+        $this->registrarEnvio('invitacion', $canal, $texto['asunto'], $texto['mensaje'], 1, $usuario);
+        $this->despachar($invitacion, $canal, 'invitacion', $texto['asunto'], $texto['mensaje']);
     }
 
-    private function enviarA($invitaciones, string $motivo, string $asunto, string $mensaje, ?User $usuario): int
+    private function enviarA($invitaciones, string $canal, string $motivo, string $asunto, string $mensaje, ?User $usuario): int
     {
         if ($invitaciones->isEmpty()) {
             return 0;
         }
-        $this->registrarEnvio($motivo, $asunto, $mensaje, $invitaciones->count(), $usuario);
-        $invitaciones->each(fn (Invitacion $i) => $this->despachar($i, $motivo, $asunto, $mensaje));
+        $this->registrarEnvio($motivo, $canal, $asunto, $mensaje, $invitaciones->count(), $usuario);
+        $invitaciones->each(fn (Invitacion $i) => $this->despachar($i, $canal, $motivo, $asunto, $mensaje));
 
         return $invitaciones->count();
     }
 
-    private function despachar(Invitacion $inv, string $motivo, string $asunto, string $mensaje): void
+    /** Escribe a cada invitación por los canales por los que le llegó la invitación ($motivoEnvio es el del historial). */
+    private function enviarPorSusCanales($invitaciones, string $motivo, string $motivoEnvio, string $asunto, string $mensaje, ?User $usuario): void
+    {
+        $invitaciones->load('contacto');
+        foreach (array_keys(Invitacion::CANALES) as $canal) {
+            $grupo = $invitaciones->filter(fn (Invitacion $i) => in_array($canal, $i->canalesEnviados(), true));
+            if ($grupo->isNotEmpty()) {
+                $this->registrarEnvio($motivoEnvio, $canal, $asunto, $mensaje, $grupo->count(), $usuario);
+                $grupo->each(fn (Invitacion $i) => $this->despachar($i, $canal, $motivo, $asunto, $mensaje));
+            }
+        }
+    }
+
+    private function despachar(Invitacion $inv, string $canal, string $motivo, string $asunto, string $mensaje): void
     {
         $inv->setRelation('evento', $this->evento);
         $contacto = $inv->contacto;
+        $mensaje = Plantilla::rellenar($mensaje, $this->evento, $contacto);
 
-        EnviarCorreoEvento::dispatch(
-            $inv,
-            $motivo,
-            Plantilla::rellenar($asunto, $this->evento, $contacto),
-            Plantilla::rellenar($mensaje, $this->evento, $contacto),
-        );
+        if ($canal === Invitacion::WHATSAPP) {
+            // Cada mensaje en su turno, espaciado según la protección configurada
+            EnviarWhatsAppEvento::dispatch($inv, $motivo, $mensaje)->delay(WhatsApp::turno());
+
+            return;
+        }
+
+        if (! $inv->correo && $contacto->correo) {
+            $inv->update(['correo' => $contacto->correo]); // Invitado antes solo por WhatsApp
+        }
+        EnviarCorreoEvento::dispatch($inv, $motivo, Plantilla::rellenar($asunto, $this->evento, $contacto), $mensaje);
     }
 
-    private function registrarEnvio(string $motivo, string $asunto, string $mensaje, int $total, ?User $usuario): void
+    private function registrarEnvio(string $motivo, string $canal, string $asunto, string $mensaje, int $total, ?User $usuario): void
     {
         Envio::create([
-            'evento_id' => $this->evento->id, 'motivo' => $motivo, 'asunto' => $asunto,
+            'evento_id' => $this->evento->id, 'motivo' => $motivo, 'canal' => $canal, 'asunto' => $asunto,
             'mensaje' => $mensaje, 'total' => $total, 'user_id' => $usuario?->id,
         ]);
     }

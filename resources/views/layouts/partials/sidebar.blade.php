@@ -69,6 +69,7 @@
                     @can('usuarios.ver') {!! $item('usuarios.index', 'usuarios.*', 'ki-profile-user', 'Usuarios') !!} @endcan
                     @can('roles.ver') {!! $item('roles.index', 'roles.*', 'ki-shield-tick', 'Roles y permisos') !!} @endcan
                     @can('correo.ver') {!! $item('correo.edit', 'correo.*', 'ki-send', 'Correo de envío') !!} @endcan
+                    @can('correo.ver') {!! $item('whatsapp.edit', 'whatsapp.*', 'ki-whatsapp', 'WhatsApp') !!} @endcan
                 @endcanany
             </div>
         </div>

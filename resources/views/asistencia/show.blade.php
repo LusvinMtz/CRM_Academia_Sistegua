@@ -68,9 +68,16 @@
                 <a href="{{ route('constancias.todas', $evento) }}" class="btn btn-sm btn-light-primary"><i class="ki-outline ki-file-down fs-3"></i> Descargar todas (PDF)</a>
                 @can('campanias.enviar')
                     <form method="POST" action="{{ route('constancias.enviar', $evento) }}"
+                          data-confirmar="¿Enviar por WhatsApp la constancia a los asistentes que tienen teléfono?">
+                        @csrf
+                        <input type="hidden" name="canal" value="whatsapp">
+                        <button type="submit" class="btn btn-sm btn-success"><i class="ki-outline ki-whatsapp fs-3"></i> Enviar por WhatsApp</button>
+                    </form>
+                    <form method="POST" action="{{ route('constancias.enviar', $evento) }}"
                           data-confirmar="¿Enviar por correo la constancia a los {{ $resumen['presentes'] }} asistentes que tienen correo?">
                         @csrf
-                        <button type="submit" class="btn btn-sm btn-primary"><i class="ki-outline ki-send fs-3"></i> Enviar por correo</button>
+                        <input type="hidden" name="canal" value="correo">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="ki-outline ki-sms fs-3"></i> Enviar por correo</button>
                     </form>
                 @endcan
             </div>

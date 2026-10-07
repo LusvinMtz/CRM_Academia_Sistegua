@@ -20,11 +20,71 @@ class Invitacion extends Model
     public const CONFIRMADA = 'confirmada';
     public const RECHAZADA = 'rechazada';
 
+    /** Canales de envío y su etiqueta. */
+    public const CORREO = 'correo';
+    public const WHATSAPP = 'whatsapp';
+
+    public const CANALES = [self::CORREO => 'Correo', self::WHATSAPP => 'WhatsApp'];
+
     protected $fillable = [
-        'evento_id', 'contacto_id', 'correo', 'estado_envio', 'error', 'respuesta', 'comentario',
-        'respuesta_por', 'enviada_at', 'vista_at', 'respondida_at', 'recordatorio_at',
+        'evento_id', 'contacto_id', 'correo', 'telefono', 'estado_envio', 'correo_estado', 'whatsapp_estado', 'error',
+        'respuesta', 'comentario', 'respuesta_por', 'enviada_at', 'whatsapp_at', 'vista_at', 'respondida_at', 'recordatorio_at',
         'asistio', 'asistencia_at', 'asistencia_por', 'asistencia_metodo',
     ];
+
+    /**
+     * Deja la invitación lista para enviarse por un canal (la crea si no existía) y la guarda.
+     * Toma el correo o teléfono actual del contacto.
+     */
+    public static function prepararCanal(Evento $evento, Contacto $contacto, string $canal): self
+    {
+        $inv = static::firstOrNew(['evento_id' => $evento->id, 'contacto_id' => $contacto->id]);
+        $inv->setRelation('contacto', $contacto);
+        $inv->fill($canal === self::CORREO ? ['correo' => $contacto->correo] : ['telefono' => $contacto->telefono]);
+        $inv->marcarCanal($canal, self::PENDIENTE);
+
+        return $inv;
+    }
+
+    /**
+     * Registra el resultado de un canal y recalcula el estado general: enviada si algún canal llegó,
+     * si no pendiente si alguno está en camino, si no fallida.
+     */
+    public function marcarCanal(string $canal, string $estado, ?string $error = null): void
+    {
+        $this->{$canal.'_estado'} = $estado;
+
+        if ($estado === self::ENVIADA) {
+            $this->error = null;
+            $this->enviada_at ??= now();
+            if ($canal === self::WHATSAPP) {
+                $this->whatsapp_at = now();
+            }
+        } elseif ($estado === self::FALLIDA) {
+            $this->error = self::CANALES[$canal].': '.$error;
+        }
+
+        $estados = [$this->correo_estado, $this->whatsapp_estado];
+        $this->estado_envio = match (true) {
+            in_array(self::ENVIADA, $estados, true) => self::ENVIADA,
+            in_array(self::PENDIENTE, $estados, true) => self::PENDIENTE,
+            in_array(self::FALLIDA, $estados, true) => self::FALLIDA,
+            default => $this->estado_envio,
+        };
+        $this->save();
+    }
+
+    /** Canales por los que ya le llegó la invitación. */
+    public function canalesEnviados(): array
+    {
+        // Sin estado por canal: registro anterior a WhatsApp, enviado por correo
+        $correo = $this->correo_estado ?? ($this->whatsapp_estado ? null : $this->estado_envio);
+
+        return array_keys(array_filter([
+            self::CORREO => $correo === self::ENVIADA && $this->correo,
+            self::WHATSAPP => $this->whatsapp_estado === self::ENVIADA && $this->telefono,
+        ]));
+    }
 
     /** Cómo se registró la asistencia. */
     public const METODOS = [

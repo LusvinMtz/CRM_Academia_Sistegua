@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\CorreoEvento;
+use App\Models\ConfiguracionWhatsapp;
 use App\Models\Contacto;
 use App\Models\Envio;
 use App\Models\Evento;
@@ -58,12 +59,18 @@ class InvitacionController extends Controller implements HasMiddleware
         $this->autorizar($request, $tipo, $evento);
         abort_unless($evento->acepta_respuestas, 422, 'El evento ya terminó o está cancelado.');
         $datos = $this->validarTexto($request);
+        $canal = $this->canal($request);
+        if ($error = $this->whatsappNoConfigurado($canal)) {
+            return back()->with('error', $error);
+        }
 
-        $total = (new InvitacionesEvento($evento))->invitar($datos['asunto'], $datos['mensaje'], $request->user());
+        $total = (new InvitacionesEvento($evento))->invitar($datos['asunto'], $datos['mensaje'], $request->user(), $canal);
 
         return back()->with($total ? 'success' : 'info', $total
-            ? "Se enviaron {$total} invitaciones.".$this->notaPrueba()
-            : 'No hay personas nuevas por invitar: todas las que tienen correo ya fueron invitadas.');
+            ? "Se enviaron {$total} invitaciones por ".$this->nombreCanal($canal).'.'.$this->notaPrueba($canal)
+            : ($canal === Invitacion::WHATSAPP
+                ? 'No hay personas nuevas por invitar: todas las que tienen teléfono ya recibieron la invitación por WhatsApp.'
+                : 'No hay personas nuevas por invitar: todas las que tienen correo ya fueron invitadas.'));
     }
 
     public function recordar(Request $request, string $tipo, Evento $evento): RedirectResponse
@@ -79,6 +86,10 @@ class InvitacionController extends Controller implements HasMiddleware
             'confirmados.asunto' => ['nullable', 'string', 'max:200'],
             'confirmados.mensaje' => ['nullable', 'string', 'max:5000'],
         ], ['incluir.required' => 'Elija al menos un grupo para el recordatorio.']);
+        $canal = $this->canal($request);
+        if ($error = $this->whatsappNoConfigurado($canal)) {
+            return back()->with('error', $error);
+        }
 
         // Cada grupo elegido con su texto (si se dejó vacío, se usa el texto por defecto)
         $textos = [];
@@ -90,7 +101,7 @@ class InvitacionController extends Controller implements HasMiddleware
             ];
         }
 
-        [$confirmados, $sinRespuesta] = (new InvitacionesEvento($evento))->recordar($textos, $request->user());
+        [$confirmados, $sinRespuesta] = (new InvitacionesEvento($evento))->recordar($textos, $request->user(), $canal);
         $total = $confirmados + $sinRespuesta;
 
         $partes = array_filter([
@@ -99,8 +110,8 @@ class InvitacionController extends Controller implements HasMiddleware
         ]);
 
         return back()->with($total ? 'success' : 'info', $total
-            ? 'Se envió el recordatorio a '.implode(' y ', $partes).'.'.$this->notaPrueba()
-            : 'No hay personas en los grupos elegidos para recordar.');
+            ? 'Se envió el recordatorio por '.$this->nombreCanal($canal).' a '.implode(' y ', $partes).'.'.$this->notaPrueba($canal)
+            : 'No hay personas en los grupos elegidos a quienes recordar por '.$this->nombreCanal($canal).'.');
     }
 
     public function reenviar(Request $request, string $tipo, Evento $evento, Invitacion $invitacion): RedirectResponse
@@ -108,13 +119,21 @@ class InvitacionController extends Controller implements HasMiddleware
         $this->autorizar($request, $tipo, $evento);
         abort_if($invitacion->evento_id !== $evento->id, 404);
 
-        if (! $invitacion->contacto->correo) {
-            return back()->with('error', "{$invitacion->contacto->nombre_completo} ya no tiene correo registrado.");
+        $canal = $this->canal($request);
+        $contacto = $invitacion->contacto;
+        if (! $contacto->activo) {
+            return back()->with('error', "{$contacto->nombre_completo} está inactivo: no se le envían mensajes.");
+        }
+        if ($canal === Invitacion::WHATSAPP ? blank($contacto->telefono) : blank($contacto->correo)) {
+            return back()->with('error', "{$contacto->nombre_completo} no tiene ".($canal === Invitacion::WHATSAPP ? 'teléfono' : 'correo').' registrado.');
+        }
+        if ($error = $this->whatsappNoConfigurado($canal)) {
+            return back()->with('error', $error);
         }
 
-        (new InvitacionesEvento($evento))->reenviar($invitacion->load('contacto'), $request->user());
+        (new InvitacionesEvento($evento))->reenviar($invitacion->load('contacto'), $request->user(), $canal);
 
-        return back()->with('success', "Se reenvió la invitación a {$invitacion->contacto->nombre_completo}.".$this->notaPrueba());
+        return back()->with('success', "Se reenvió la invitación por {$this->nombreCanal($canal)} a {$contacto->nombre_completo}.".$this->notaPrueba($canal));
     }
 
     /** Registrar la respuesta a mano (por ejemplo, si el padre avisó por teléfono). */
@@ -181,8 +200,34 @@ class InvitacionController extends Controller implements HasMiddleware
         ]);
     }
 
-    private function notaPrueba(): string
+    /** Canal elegido con el botón del formulario: correo (por defecto) o WhatsApp. */
+    private function canal(Request $request): string
     {
+        return $request->validate(['canal' => ['nullable', Rule::in(array_keys(Invitacion::CANALES))]])['canal'] ?? Invitacion::CORREO;
+    }
+
+    private function nombreCanal(string $canal): string
+    {
+        return $canal === Invitacion::WHATSAPP ? 'WhatsApp' : 'correo';
+    }
+
+    private function whatsappNoConfigurado(string $canal): ?string
+    {
+        $config = ConfiguracionWhatsapp::actual();
+
+        return $canal === Invitacion::WHATSAPP && ! $config->enModoPrueba() && ! $config->tieneToken()
+            ? 'Falta configurar el token de WasenderAPI en Administración → WhatsApp.'
+            : null;
+    }
+
+    private function notaPrueba(string $canal = Invitacion::CORREO): string
+    {
+        if ($canal === Invitacion::WHATSAPP) {
+            return ConfiguracionWhatsapp::actual()->enModoPrueba()
+                ? ' (Modo de prueba: los mensajes se guardaron en storage/logs/whatsapp.log y no se enviaron de verdad.)'
+                : ' Salen en segundo plano, uno cada pocos segundos para proteger el número.';
+        }
+
         return config('mail.default') === 'log'
             ? ' (Modo de prueba: los correos se guardaron en storage/logs/correos.log y no se enviaron de verdad.)'
             : '';

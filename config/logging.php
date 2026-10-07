@@ -72,6 +72,13 @@ return [
             'level' => 'debug',
         ],
 
+        // WhatsApp en modo de prueba (Administración → WhatsApp)
+        'whatsapp' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/whatsapp.log'),
+            'level' => 'debug',
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

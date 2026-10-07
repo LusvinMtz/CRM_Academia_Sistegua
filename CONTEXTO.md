@@ -54,12 +54,13 @@ Se conserva la arquitectura del sistema original, simplificada a un solo públic
 | Capacitaciones | Presenciales o virtuales, estados, duplicar, archivo `.ics` | ✅ |
 | Invitaciones | Correo, confirmación pública, recordatorios, plantillas | ✅ |
 | Correo de envío | Cuenta SMTP editable desde *Administración → Correo de envío* (contraseña cifrada), modo de prueba y correo de prueba | ✅ |
+| WhatsApp | Envío por WasenderAPI (invitaciones, recordatorios, avisos y constancias). Token, código de país y pausa en *Administración → WhatsApp* (token cifrado), modo de prueba y mensaje de prueba | ✅ |
 | Asistencia | Lista manual, **QR del evento y QR personal**, listas PDF/Excel | ✅ |
 | Certificados | **Editor visual de diseños** + entrega en PDF, envío por correo y verificación pública | ✅ |
 | Reportes | Por capacitación y por persona, con exportación a Excel | ✅ |
 | Tablero | Indicadores, gráfica mensual y avisos de pendientes | ✅ |
 
-Pruebas automáticas: **84**, todas pasan.
+Pruebas automáticas: **98**, todas pasan.
 
 **Datos de demostración** (`php artisan migrate:fresh --seed`): 400 clientes con apellidos
 típicos de cada región, 13 grupos, 25 capacitaciones del último año con ~2,000 invitaciones
@@ -90,7 +91,36 @@ Es la función propia de este proyecto (el sistema anterior tenía el certificad
 - Cada capacitación puede usar un diseño propio (`eventos.plantilla_certificado_id`); si no,
   se usa el marcado como predeterminado.
 
-## 6. Pendientes y decisiones abiertas
+## 6. WhatsApp (WasenderAPI)
+
+- **Configuración**: `ConfiguracionWhatsapp` (tabla `configuracion_whatsapp`): modo (`api` | `log`), token cifrado,
+  código de país (se antepone a teléfonos de 8 dígitos) y pausa entre mensajes. Mismos permisos que el correo (`correo.*`).
+- **Cliente**: `App\Services\WhatsApp` (`POST /api/send-message` con `Authorization: Bearer`). Modo de prueba → `storage/logs/whatsapp.log`.
+- **Canales por invitación**: `correo_estado` y `whatsapp_estado`; `estado_envio` es el general (enviada si algún canal llegó).
+  Cada canal se invita por separado: invitar por WhatsApp no impide invitar después por correo, y viceversa.
+- **Botones**: en *Enviar invitaciones* y *Enviar recordatorio* hay "Por WhatsApp" y "Por correo"; en cada invitado,
+  enviar/reenviar por cada canal; en asistencia, constancias por WhatsApp o por correo.
+- Los **avisos** (cambio, posposición, cancelación) y el **recordatorio automático** salen por los canales por los que se invitó a cada persona.
+- **Constancias**: WasenderAPI descarga el PDF de `/constancia/{token}/pdf` (enlace firmado, 30 días). Requiere `APP_URL` público.
+- **Protección contra bloqueos** (`proteccion`, activa por defecto): mínimo 5 s entre mensajes y espera al azar entre la pausa
+  y el doble (8 → 8–16 s). `WhatsApp::turno()` reparte los turnos en una sola fila para todo el sistema (caché + lock).
+  Además conviene activar *Account Protection* en la sesión de WasenderAPI. Si la API responde 429, el trabajo vuelve a la cola.
+- **Solo clientes activos**: invitaciones, recordatorios, avisos, reenvíos y envío de constancias excluyen a los inactivos
+  aunque estén en los grupos invitados (la descarga de constancias en PDF sí los incluye).
+
+## 7. Cola de envíos
+
+- `QUEUE_CONNECTION=database`: correos y WhatsApp salen en segundo plano.
+- **No necesita tarea programada ni ventana abierta**: `App\Services\ProcesadorEnvios` procesa la cola al terminar
+  la petición web en la que se encolaron envíos, esperando el turno de cada mensaje.
+  - En el hosting (PHP-FPM / LiteSpeed) corre en la misma petición después de entregar la página (el usuario no espera).
+  - Con `php artisan serve` lanza en segundo plano `php artisan envios:procesar`.
+  - Candado en caché (latido de 90 s) para que no haya dos procesadores; corridas de hasta 25 min.
+  - Respaldo: cualquier visita revisa (cada 30 s como máximo) si hay envíos atrasados y los reanuda.
+- Si el servidor tiene cron con `schedule:run`, `envios:procesar` corre también cada minuto como refuerzo (opcional).
+- Si hay envíos atrasados más de 3 minutos, la ficha del evento y *Administración → WhatsApp* lo avisan.
+
+## 8. Pendientes y decisiones abiertas
 
 - [ ] **Logos reales** de la empresa (hoy siguen los del proyecto anterior).
 - [ ] **Nombre y sucursales reales**: hoy "Academia Sistegua" con tres sedes de ejemplo.
@@ -101,7 +131,7 @@ Es la función propia de este proyecto (el sistema anterior tenía el certificad
 - [ ] Publicar en un servidor con PHP 8.2 + MySQL.
 - [ ] Colores: se heredó la paleta azul marino + dorado; ajustar a la identidad de la empresa.
 
-## 7. Convenciones del código
+## 9. Convenciones del código
 
 - Todo el texto de la interfaz en español; validaciones en español (`lang/es`).
 - Rutas con segmento de tipo: `/contactos/clientes`, `/eventos/capacitaciones`.

@@ -146,6 +146,10 @@
                         <span class="fw-semibold text-gray-700">Con correo para invitar</span>
                         <span class="fw-bold fs-3 text-success">{{ number_format($conCorreo) }}</span>
                     </div>
+                    <div class="d-flex flex-stack border border-dashed border-gray-300 rounded p-4 mt-3">
+                        <span class="fw-semibold text-gray-700">Con teléfono para WhatsApp</span>
+                        <span class="fw-bold fs-3 text-success">{{ number_format($conTelefono) }}</span>
+                    </div>
                     @if ($totalDestinatarios > $conCorreo)
                         <div class="text-warning fs-7 fw-semibold mt-3">
                             {{ $totalDestinatarios - $conCorreo }} sin correo o que no desean recibir correos.

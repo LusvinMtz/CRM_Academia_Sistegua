@@ -17,7 +17,9 @@ class Envio extends Model
         'constancia' => 'Constancias',
     ];
 
-    protected $fillable = ['evento_id', 'motivo', 'asunto', 'mensaje', 'total', 'user_id'];
+    protected $fillable = ['evento_id', 'motivo', 'canal', 'asunto', 'mensaje', 'total', 'user_id'];
+
+    protected $attributes = ['canal' => Invitacion::CORREO];
 
     public function evento(): BelongsTo
     {

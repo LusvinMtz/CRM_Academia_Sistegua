@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ConfiguracionWhatsapp;
 use App\Models\Evento;
 use App\Models\Grupo;
 use App\Models\Invitacion;
@@ -123,9 +124,13 @@ class EventoController extends Controller implements HasMiddleware
             'evento' => $evento,
             'totalDestinatarios' => $evento->destinatarios()->count(),
             'conCorreo' => $evento->destinatariosConCorreo()->count(),
+            'conTelefono' => $evento->destinatariosConTelefono()->count(),
             'porInvitar' => $servicio->porInvitar()->count(),
+            'porInvitarWhatsapp' => $servicio->porInvitar(Invitacion::WHATSAPP)->count(),
             'porRecordar' => $servicio->porRecordar()->count(),
+            'porRecordarWhatsapp' => $servicio->porRecordar(Invitacion::WHATSAPP)->count(),
             'confirmadosPorRecordar' => $servicio->confirmadosPorRecordar()->count(),
+            'confirmadosPorRecordarWhatsapp' => $servicio->confirmadosPorRecordar(Invitacion::WHATSAPP)->count(),
             'porAvisar' => $servicio->porAvisar()->count(),
             'tieneEnviadas' => $evento->tieneInvitacionesEnviadas(),
             'control' => $evento->control(),
@@ -135,6 +140,8 @@ class EventoController extends Controller implements HasMiddleware
             'plantillas' => Plantilla::where('tipo_evento', $evento->tipo)->where('activa', true)->orderByDesc('predeterminada')->orderBy('nombre')->get(),
             'textosRecordatorio' => InvitacionesEvento::TEXTOS_AUTOMATICOS,
             'modoPrueba' => config('mail.default') === 'log',
+            'modoPruebaWhatsapp' => ConfiguracionWhatsapp::actual()->enModoPrueba(),
+            'enviosDetenidos' => ConfiguracionWhatsappController::mensajesDetenidos(),
         ]);
     }
 

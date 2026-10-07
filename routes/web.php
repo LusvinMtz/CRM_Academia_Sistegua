@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\ConfiguracionCorreoController;
+use App\Http\Controllers\ConfiguracionWhatsappController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\ContactoController;
@@ -46,6 +47,9 @@ Route::prefix('registro/{token}')->whereUuid('token')->name('registro.')->middle
 // Verificación pública de constancias (el código viene impreso en el PDF)
 Route::get('/constancia/verificar/{codigo?}', [ConstanciaController::class, 'verificar'])
     ->middleware('throttle:30,1')->name('constancia.verificar');
+// PDF de la constancia por enlace firmado (WasenderAPI lo descarga para enviarlo por WhatsApp)
+Route::get('/constancia/{token}/pdf', [ConstanciaController::class, 'publica'])->whereUuid('token')
+    ->middleware(['signed', 'throttle:30,1'])->name('constancia.publica');
 
 Route::middleware(['auth', 'activo'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
@@ -174,6 +178,12 @@ Route::middleware(['auth', 'activo'])->group(function () {
     Route::put('/configuracion/correo', [ConfiguracionCorreoController::class, 'update'])->name('correo.update');
     Route::post('/configuracion/correo/prueba', [ConfiguracionCorreoController::class, 'probar'])
         ->middleware('throttle:10,1')->name('correo.probar');
+
+    // Cuenta de WasenderAPI desde la que salen los mensajes de WhatsApp
+    Route::get('/configuracion/whatsapp', [ConfiguracionWhatsappController::class, 'edit'])->name('whatsapp.edit');
+    Route::put('/configuracion/whatsapp', [ConfiguracionWhatsappController::class, 'update'])->name('whatsapp.update');
+    Route::post('/configuracion/whatsapp/prueba', [ConfiguracionWhatsappController::class, 'probar'])
+        ->middleware('throttle:10,1')->name('whatsapp.probar');
 
     Route::middleware('permission:geografia.ver')->group(function () {
         Route::get('/geografia', [GeografiaController::class, 'index'])->name('geografia.index');

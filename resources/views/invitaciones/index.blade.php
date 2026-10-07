@@ -58,7 +58,10 @@
                     @forelse ($envios as $envio)
                         <tr>
                             <td class="text-nowrap">{{ $envio->created_at->format('d/m/Y H:i') }}</td>
-                            <td><span class="badge badge-light">{{ \App\Models\Envio::MOTIVOS[$envio->motivo] ?? $envio->motivo }}</span></td>
+                            <td>
+                                <span class="badge badge-light">{{ \App\Models\Envio::MOTIVOS[$envio->motivo] ?? $envio->motivo }}</span>
+                                <i class="ki-outline {{ $envio->canal === 'whatsapp' ? 'ki-whatsapp text-success' : 'ki-sms' }} fs-5 ms-1" title="{{ \App\Models\Invitacion::CANALES[$envio->canal] ?? '' }}"></i>
+                            </td>
                             <td>
                                 <a href="{{ route('eventos.show', [\App\Models\Evento::segmentoDe($envio->evento->tipo), $envio->evento]) }}#invitaciones"
                                    class="text-gray-900 text-hover-primary fw-bold">{{ $envio->evento->titulo }}</a>

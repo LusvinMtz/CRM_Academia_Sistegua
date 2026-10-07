@@ -17,15 +17,15 @@
         </h3>
         @if ($puedeEnviar)
             <div class="card-toolbar gap-2">
-                @if ($porRecordar + $confirmadosPorRecordar > 0)
+                @if ($porRecordar + $confirmadosPorRecordar + $porRecordarWhatsapp + $confirmadosPorRecordarWhatsapp > 0)
                     <button type="button" class="btn btn-sm btn-light-warning" data-bs-toggle="modal" data-bs-target="#modalRecordar">
                         <i class="ki-outline ki-notification-on fs-3"></i> Enviar recordatorio
                     </button>
                 @endif
-                @if ($porInvitar > 0 || $resumen['invitados'] === 0)
-                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalInvitar" @disabled($porInvitar === 0)>
+                @if ($porInvitar + $porInvitarWhatsapp > 0 || $resumen['invitados'] === 0)
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalInvitar" @disabled($porInvitar + $porInvitarWhatsapp === 0)>
                         <i class="ki-outline ki-send fs-3"></i>
-                        {{ $resumen['invitados'] ? "Invitar a nuevos ($porInvitar)" : "Enviar invitaciones ($porInvitar)" }}
+                        {{ $resumen['invitados'] ? 'Invitar a nuevos' : 'Enviar invitaciones' }}
                     </button>
                 @endif
             </div>
@@ -41,6 +41,23 @@
                 </span>
             </div>
         @endif
+        @if ($enviosDetenidos > 0)
+            <div class="alert bg-light-danger border border-danger border-dashed d-flex align-items-center p-4 mb-6">
+                <i class="ki-outline ki-time fs-2x text-danger me-3"></i>
+                <span class="fw-semibold text-gray-800 fs-7">
+                    Hay {{ $enviosDetenidos }} {{ $enviosDetenidos === 1 ? 'envío atrasado' : 'envíos atrasados' }}. El sistema los reanuda solo
+                    (al abrir esta página se vuelven a poner en marcha). Si el aviso sigue después de unos minutos, revise <code>storage/logs/laravel.log</code>.
+                </span>
+            </div>
+        @endif
+        @if ($modoPruebaWhatsapp && $puedeEnviar)
+            <div class="alert bg-light-warning border border-warning border-dashed d-flex align-items-center p-4 mb-6">
+                <i class="ki-outline ki-whatsapp fs-2x text-warning me-3"></i>
+                <span class="fw-semibold text-gray-800 fs-7">
+                    <strong>WhatsApp en modo de prueba:</strong> los mensajes no se envían de verdad; se guardan en <code>storage/logs/whatsapp.log</code>.
+                </span>
+            </div>
+        @endif
 
         @if (! $evento->acepta_respuestas && $resumen['invitados'] === 0)
             <div class="text-muted">
@@ -51,8 +68,8 @@
                 <i class="ki-outline ki-sms fs-5x text-gray-300 mb-4"></i>
                 <div class="text-gray-700 fw-semibold mb-1">Todavía no se han enviado invitaciones.</div>
                 <div class="text-muted fs-7">
-                    {{ $porInvitar }} {{ $porInvitar === 1 ? 'persona recibirá' : 'personas recibirán' }} el correo.
-                    @if ($totalDestinatarios > $conCorreo) Las {{ $totalDestinatarios - $conCorreo }} sin correo no se incluyen. @endif
+                    {{ $porInvitar }} {{ $porInvitar === 1 ? 'persona tiene' : 'personas tienen' }} correo y
+                    {{ $porInvitarWhatsapp }} {{ $porInvitarWhatsapp === 1 ? 'tiene' : 'tienen' }} teléfono para WhatsApp.
                 </div>
             </div>
         @else
@@ -120,7 +137,19 @@
                         <tr>
                             <td>
                                 <div class="text-gray-900 fw-bold">{{ $inv->contacto->nombre_completo }}</div>
-                                <div class="text-muted">{{ $inv->correo }}@if ($inv->contacto->empresa) · {{ $inv->contacto->empresa }}@endif</div>
+                                <div class="text-muted">
+                                    {{ $inv->correo ?? $inv->contacto->correo }}@if (($inv->correo ?? $inv->contacto->correo) && $inv->contacto->telefono) · @endif{{ $inv->contacto->telefono }}@if ($inv->contacto->empresa) · {{ $inv->contacto->empresa }}@endif
+                                </div>
+                                <div class="d-flex gap-1 mt-1">
+                                    @foreach (\App\Models\Invitacion::CANALES as $canal => $etqCanal)
+                                        @if ($estadoCanal = $inv->{$canal.'_estado'})
+                                            <span class="badge badge-light-{{ ['enviada' => 'success', 'pendiente' => 'warning', 'fallida' => 'danger'][$estadoCanal] ?? 'secondary' }} fs-9"
+                                                  title="{{ $etqCanal }}: {{ $estadoCanal }}">
+                                                <i class="ki-outline {{ $canal === 'whatsapp' ? 'ki-whatsapp' : 'ki-sms' }} fs-8 me-1"></i>{{ $etqCanal }}
+                                            </span>
+                                        @endif
+                                    @endforeach
+                                </div>
                             </td>
                             <td>
                                 <span class="badge badge-light-{{ $sitColor }}"><i class="ki-outline {{ $sitIcono }} fs-7 me-1 text-{{ $sitColor }}"></i>{{ $sitTxt }}</span>
@@ -155,7 +184,16 @@
                                                 <div class="dropdown-divider"></div>
                                                 <form method="POST" action="{{ route('invitaciones.reenviar', [$segmento, $evento, $inv]) }}">
                                                     @csrf
-                                                    <button type="submit" class="dropdown-item fs-7"><i class="ki-outline ki-send fs-5 me-2"></i>Reenviar invitación</button>
+                                                    @if ($inv->contacto->correo)
+                                                        <button type="submit" name="canal" value="correo" class="dropdown-item fs-7">
+                                                            <i class="ki-outline ki-sms fs-5 me-2"></i>{{ $inv->correo_estado ? 'Reenviar' : 'Enviar' }} por correo
+                                                        </button>
+                                                    @endif
+                                                    @if ($inv->contacto->telefono)
+                                                        <button type="submit" name="canal" value="whatsapp" class="dropdown-item fs-7">
+                                                            <i class="ki-outline ki-whatsapp fs-5 me-2"></i>{{ $inv->whatsapp_estado ? 'Reenviar' : 'Enviar' }} por WhatsApp
+                                                        </button>
+                                                    @endif
                                                 </form>
                                             @endif
                                             <div class="dropdown-divider"></div>
@@ -189,7 +227,11 @@
             @foreach ($evento->envios as $envio)
                 <div class="d-flex align-items-center gap-3 mb-2 fs-7">
                     <span class="badge badge-light">{{ \App\Models\Envio::MOTIVOS[$envio->motivo] ?? $envio->motivo }}</span>
-                    <span class="text-gray-700">{{ $envio->total }} {{ $envio->total === 1 ? 'correo' : 'correos' }}</span>
+                    @if ($envio->canal === 'whatsapp')
+                        <span class="text-gray-700"><i class="ki-outline ki-whatsapp fs-6 text-success"></i> {{ $envio->total }} {{ $envio->total === 1 ? 'mensaje' : 'mensajes' }} de WhatsApp</span>
+                    @else
+                        <span class="text-gray-700"><i class="ki-outline ki-sms fs-6"></i> {{ $envio->total }} {{ $envio->total === 1 ? 'correo' : 'correos' }}</span>
+                    @endif
                     <span class="text-muted">{{ $envio->created_at->format('d/m/Y H:i') }}{{ $envio->usuario ? ' · '.$envio->usuario->nombre_completo : '' }}</span>
                 </div>
             @endforeach
@@ -204,7 +246,7 @@
             <form method="POST" action="{{ route('invitaciones.enviar', [$segmento, $evento]) }}" class="modal-content" data-form-correo>
                 @csrf
                 <div class="modal-header">
-                    <h3 class="modal-title fs-4">Enviar invitaciones a {{ $porInvitar }} {{ $porInvitar === 1 ? 'persona' : 'personas' }}</h3>
+                    <h3 class="modal-title fs-4">Enviar invitaciones</h3>
                     <button type="button" class="btn btn-icon btn-sm" data-bs-dismiss="modal" aria-label="Cerrar"><i class="ki-outline ki-cross fs-1"></i></button>
                 </div>
                 <div class="modal-body">
@@ -223,7 +265,9 @@
                         'mensaje' => $plantillaInicial?->mensaje ?? '',
                     ])
                     <div class="text-muted fs-7 mt-4">
-                        Solo se envía a quienes todavía no tienen invitación; si después agrega personas al grupo, podrá invitarlas sin repetir el correo a los demás.
+                        Cada canal se envía solo a quienes todavía no recibieron la invitación por ese medio; si después agrega personas al grupo,
+                        podrá invitarlas sin repetir el mensaje a los demás. Por WhatsApp no se usa el asunto: se envía el mensaje con la fecha,
+                        el lugar y el enlace para confirmar.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -231,7 +275,12 @@
                         <i class="ki-outline ki-eye fs-3"></i> Vista previa
                     </a>
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" data-cargando><i class="ki-outline ki-send fs-3"></i> Enviar</button>
+                    <button type="submit" name="canal" value="whatsapp" class="btn btn-success" data-cargando @disabled($porInvitarWhatsapp === 0)>
+                        <i class="ki-outline ki-whatsapp fs-3"></i> Por WhatsApp ({{ $porInvitarWhatsapp }})
+                    </button>
+                    <button type="submit" name="canal" value="correo" class="btn btn-primary" data-cargando @disabled($porInvitar === 0)>
+                        <i class="ki-outline ki-sms fs-3"></i> Por correo ({{ $porInvitar }})
+                    </button>
                 </div>
             </form>
         </div>
@@ -256,13 +305,15 @@
                     @endif
 
                     @foreach ([
-                        'sin_respuesta' => ['Quienes no han respondido', $porRecordar, 'Se les pide que confirmen.'],
-                        'confirmados' => ['Quienes confirmaron', $confirmadosPorRecordar, 'Se les recuerda que les esperan.'],
-                    ] as $grupo => [$titulo, $n, $ayuda])
+                        'sin_respuesta' => ['Quienes no han respondido', $porRecordar, $porRecordarWhatsapp, 'Se les pide que confirmen.'],
+                        'confirmados' => ['Quienes confirmaron', $confirmadosPorRecordar, $confirmadosPorRecordarWhatsapp, 'Se les recuerda que les esperan.'],
+                    ] as $grupo => [$titulo, $nCorreo, $nWhatsapp, $ayuda])
+                        @php($n = max($nCorreo, $nWhatsapp))
                         <div class="border border-dashed border-gray-300 rounded p-5 mb-5" data-grupo-recordatorio>
                             <label class="form-check form-check-custom form-check-solid mb-1">
                                 <input class="form-check-input" type="checkbox" name="incluir[]" value="{{ $grupo }}" @checked($n > 0) @disabled($n === 0) data-incluir>
-                                <span class="form-check-label fw-bold text-gray-900 fs-6">{{ $titulo }} ({{ $n }})</span>
+                                <span class="form-check-label fw-bold text-gray-900 fs-6">{{ $titulo }}</span>
+                                <span class="text-muted fs-7 ms-2">correo: {{ $nCorreo }} · WhatsApp: {{ $nWhatsapp }}</span>
                             </label>
                             <div class="text-muted fs-7 ms-9 mb-4">{{ $ayuda }}</div>
                             <div data-campos @if ($n === 0) hidden @endif>
@@ -279,7 +330,12 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning" data-cargando><i class="ki-outline ki-notification-on fs-3"></i> Enviar recordatorio</button>
+                    <button type="submit" name="canal" value="whatsapp" class="btn btn-success" data-cargando @disabled($porRecordarWhatsapp + $confirmadosPorRecordarWhatsapp === 0)>
+                        <i class="ki-outline ki-whatsapp fs-3"></i> Por WhatsApp
+                    </button>
+                    <button type="submit" name="canal" value="correo" class="btn btn-warning" data-cargando @disabled($porRecordar + $confirmadosPorRecordar === 0)>
+                        <i class="ki-outline ki-sms fs-3"></i> Por correo
+                    </button>
                 </div>
             </form>
         </div>
@@ -325,11 +381,24 @@
                         area.selectionStart = area.selectionEnd = ini + chip.dataset.variable.length;
                     });
                 });
-                // Evitar doble envío
-                document.querySelectorAll('[data-form-correo] [data-cargando]').forEach(function (btn) {
-                    btn.form.addEventListener('submit', function () {
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Enviando…';
+                // Evitar doble envío. Hay un botón por canal: el elegido se pasa en un campo oculto,
+                // porque un botón deshabilitado ya no se envía con el formulario.
+                document.querySelectorAll('[data-form-correo]').forEach(function (form) {
+                    form.addEventListener('submit', function (ev) {
+                        var elegido = ev.submitter;
+                        if (elegido && elegido.name) {
+                            var oculto = document.createElement('input');
+                            oculto.type = 'hidden';
+                            oculto.name = elegido.name;
+                            oculto.value = elegido.value;
+                            form.appendChild(oculto);
+                        }
+                        form.querySelectorAll('[data-cargando]').forEach(function (btn) {
+                            btn.disabled = true;
+                            if (btn === elegido || !elegido) {
+                                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Enviando…';
+                            }
+                        });
                     });
                 });
             })();

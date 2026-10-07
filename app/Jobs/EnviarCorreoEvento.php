@@ -41,14 +41,14 @@ class EnviarCorreoEvento implements ShouldQueue
         } catch (\Throwable $e) {
             report($e);
             if ($this->motivo === 'invitacion') {
-                $inv->update(['estado_envio' => Invitacion::FALLIDA, 'error' => Str::limit($e->getMessage(), 500)]);
+                $inv->marcarCanal(Invitacion::CORREO, Invitacion::FALLIDA, Str::limit($e->getMessage(), 450));
             }
 
             return;
         }
 
         match ($this->motivo) {
-            'invitacion' => $inv->update(['estado_envio' => Invitacion::ENVIADA, 'error' => null, 'enviada_at' => now()]),
+            'invitacion' => $inv->marcarCanal(Invitacion::CORREO, Invitacion::ENVIADA),
             'recordatorio' => $inv->update(['recordatorio_at' => now()]),
             default => null,
         };
