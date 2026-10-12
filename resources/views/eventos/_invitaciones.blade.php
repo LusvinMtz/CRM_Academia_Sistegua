@@ -159,7 +159,7 @@
                             <td class="text-nowrap">
                                 @if ($inv->respondida_at)
                                     {{ $inv->respondida_at->format('d/m H:i') }}
-                                    <div class="text-muted fs-8">{{ $inv->respuesta_por === 'personal' ? 'Registrado por la academia' : 'Por correo' }}</div>
+                                    <div class="text-muted fs-8">{{ $inv->respuesta_por_texto }}</div>
                                 @else
                                     <span class="text-muted">—</span>
                                 @endif

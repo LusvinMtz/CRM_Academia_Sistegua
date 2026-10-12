@@ -86,19 +86,50 @@
                 @if ($respuesta)
                     <div class="text-muted mt-2">Su respuesta fue: {{ $respuesta === 'confirmada' ? 'asistiré' : 'no podré asistir' }}.</div>
                 @endif
+            @elseif ($respuesta)
+                @php($confirmo = $respuesta === 'confirmada')
+                <div class="d-flex align-items-center mb-6">
+                    <i class="ki-outline {{ $confirmo ? 'ki-check-circle text-success' : 'ki-cross-circle text-danger' }} fs-3x me-4"></i>
+                    <div>
+                        <div class="text-gray-600 fs-7">Su respuesta</div>
+                        <div class="fs-4 fw-bold text-{{ $confirmo ? 'success' : 'danger' }}">{{ $confirmo ? 'Asistiré' : 'No podré asistir' }}</div>
+                        @if ($invitacion->comentario)
+                            <div class="text-gray-700 fs-7 mt-1">"{{ $invitacion->comentario }}"</div>
+                        @endif
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('invitacion.responder', $invitacion->token) }}" class="d-flex flex-wrap align-items-center gap-3">
+                    @csrf
+                    @if ($canal)<input type="hidden" name="c" value="{{ $canal }}">@endif
+                    <input type="hidden" name="comentario" value="{{ $invitacion->comentario }}">
+                    <span class="text-gray-600 fs-7">¿Cambió de planes?</span>
+                    @if ($confirmo)
+                        <button type="submit" name="respuesta" value="rechazada" class="btn btn-sm btn-light-danger">
+                            <i class="ki-outline ki-cross fs-3"></i> Ya no podré asistir
+                        </button>
+                    @elseif ($sinCupo)
+                        <span class="badge badge-light-warning fs-7">Ya no hay cupos disponibles para confirmar.</span>
+                    @else
+                        <button type="submit" name="respuesta" value="confirmada" class="btn btn-sm btn-light-success">
+                            <i class="ki-outline ki-check fs-3"></i> Sí podré asistir
+                        </button>
+                    @endif
+                </form>
+
+                @if ($confirmo)
+                    <div class="separator separator-dashed my-6"></div>
+                    <a href="{{ route('invitacion.calendario', $invitacion->token) }}" class="btn btn-sm btn-light-primary">
+                        <i class="ki-outline ki-calendar-add fs-3"></i> Agregar a mi calendario
+                    </a>
+                @endif
             @else
                 <h2 class="fs-4 fw-bold text-gray-900 mb-2">¿Podrá asistir?</h2>
-                @if ($respuesta)
-                    <div class="text-gray-600 mb-5">
-                        Su respuesta actual: <strong class="text-{{ $respuesta === 'confirmada' ? 'success' : 'danger' }}">{{ $respuesta === 'confirmada' ? 'Asistiré' : 'No podré asistir' }}</strong>.
-                        Puede cambiarla si lo necesita.
-                    </div>
-                @else
-                    <div class="text-gray-600 mb-5">Por favor, indíquenos su respuesta.</div>
-                @endif
+                <div class="text-gray-600 mb-5">Por favor, indíquenos su respuesta.</div>
 
                 <form method="POST" action="{{ route('invitacion.responder', $invitacion->token) }}">
                     @csrf
+                    @if ($canal)<input type="hidden" name="c" value="{{ $canal }}">@endif
                     <div class="mb-5">
                         <label for="comentario" class="form-label fw-semibold text-gray-700 fs-7">Comentario (opcional)</label>
                         <textarea id="comentario" name="comentario" rows="2" maxlength="500" class="form-control form-control-solid"
@@ -127,24 +158,6 @@
             @endif
         </div>
     </div>
-
-    @if ($abierto)
-        <div class="card shadow-sm mb-6">
-            <div class="card-body p-6 p-md-8 d-flex flex-column flex-sm-row align-items-center gap-6">
-                <img src="{{ \App\Services\Qr::dataUri($invitacion->urlEscaneo(), 6) }}" alt="Pase de entrada" class="w-150px h-150px" style="image-rendering: pixelated">
-                <div class="text-center text-sm-start">
-                    <div class="fs-4 fw-bold text-gray-900 mb-1">Su pase de entrada</div>
-                    <div class="text-gray-600">
-                        @if ($invitacion->asistio)
-                            <span class="badge badge-light-success fs-7">Asistencia registrada</span>
-                        @else
-                            Al llegar, muestre este código en la entrada para registrar su asistencia.
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 
     <div class="text-center text-muted fs-8">
         ¿No desea recibir más correos de la academia? <a href="{{ route('invitacion.baja', $invitacion->token) }}" class="text-muted text-decoration-underline">Darse de baja</a>

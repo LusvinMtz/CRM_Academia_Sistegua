@@ -203,8 +203,23 @@ class Invitacion extends Model
         };
     }
 
-    public function url(?string $respuesta = null): string
+    /** Enlace a la página del invitado; $canal (correo | whatsapp) indica por dónde llegó, para registrar cómo respondió. */
+    public function url(?string $respuesta = null, ?string $canal = null): string
     {
-        return route('invitacion.show', ['token' => $this->token] + ($respuesta ? ['r' => $respuesta] : []));
+        return route('invitacion.show', ['token' => $this->token]
+            + ($respuesta ? ['r' => $respuesta] : [])
+            + ($canal ? ['c' => $canal] : []));
+    }
+
+    /** Por dónde se registró la respuesta, para mostrarlo en la lista de invitaciones. */
+    public function getRespuestaPorTextoAttribute(): ?string
+    {
+        return match ($this->respuesta_por) {
+            null => null,
+            'personal' => 'Registrado por la academia',
+            self::CORREO => 'Por correo',
+            self::WHATSAPP => 'Por WhatsApp',
+            default => 'Por el enlace',
+        };
     }
 }

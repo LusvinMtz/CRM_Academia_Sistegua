@@ -30,7 +30,7 @@
         </div>
     </main>
     <footer class="py-5 text-center text-muted fs-8">
-        {{ config('academia.nombre') }} · {{ implode(' · ', config('academia.sedes')) }}
+        {{ config('academia.nombre') }}
     </footer>
 </div>
 </body>

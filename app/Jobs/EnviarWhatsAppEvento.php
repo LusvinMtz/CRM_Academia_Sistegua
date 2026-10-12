@@ -89,7 +89,7 @@ class EnviarWhatsAppEvento implements ShouldQueue
         }
         if ($this->motivo !== 'cancelacion' && $evento->acepta_respuestas) {
             $lineas[] = '';
-            $lineas[] = 'Confirme su asistencia aquí: '.$inv->url();
+            $lineas[] = 'Confirme su asistencia aquí: '.$inv->url(canal: Invitacion::WHATSAPP);
         }
 
         return implode("\n", $lineas);

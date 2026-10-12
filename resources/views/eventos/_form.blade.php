@@ -92,21 +92,23 @@
         @if ($esCapacitacion)
             <h4 class="fw-bold text-gray-800 mb-5">Capacitación</h4>
             <div class="row g-6 mb-10">
-                <div class="col-md-8">
+                @php($disenos = \App\Models\PlantillaCertificado::orderByDesc('predeterminada')->orderBy('nombre')->get())
+                <div class="{{ $disenos->isNotEmpty() ? 'col-md-6' : 'col-12' }}">
                     <label for="facilitador" class="form-label fw-semibold">Facilitador o capacitador</label>
                     <input id="facilitador" name="facilitador" value="{{ old('facilitador', $evento->facilitador) }}" maxlength="150"
                            class="form-control form-control-solid @error('facilitador') is-invalid @enderror" placeholder="Nombre de quien imparte la capacitación">
                     @error('facilitador') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
+                {{-- Cupo máximo: oculto por ahora. Sin este campo las capacitaciones se guardan sin límite.
                 <div class="col-md-4">
                     <label for="cupo" class="form-label fw-semibold">Cupo máximo</label>
                     <input id="cupo" type="number" name="cupo" min="1" max="5000" value="{{ old('cupo', $evento->cupo) }}"
                            class="form-control form-control-solid @error('cupo') is-invalid @enderror" placeholder="Sin límite">
                     @error('cupo') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                @php($disenos = \App\Models\PlantillaCertificado::orderByDesc('predeterminada')->orderBy('nombre')->get())
+                --}}
                 @if ($disenos->isNotEmpty())
-                    <div class="col-md-8">
+                    <div class="col-md-6">
                         <label for="plantilla_certificado_id" class="form-label fw-semibold">Diseño del certificado</label>
                         <select id="plantilla_certificado_id" name="plantilla_certificado_id" class="form-select form-select-solid">
                             <option value="">Usar el diseño predeterminado</option>

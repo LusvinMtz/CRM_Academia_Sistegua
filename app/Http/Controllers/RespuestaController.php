@@ -29,6 +29,7 @@ class RespuestaController extends Controller
             'invitacion' => $invitacion,
             'evento' => $invitacion->evento,
             'sugerida' => $request->input('r'),
+            'canal' => self::canal($request),
         ]);
     }
 
@@ -53,14 +54,27 @@ class RespuestaController extends Controller
             return back()->with('error', 'Lo sentimos, ya no hay cupos disponibles para esta capacitación.');
         }
 
+        // Canal por el que llegó (enlace del correo o de WhatsApp). Si cambia su respuesta desde la
+        // página ya sin el parámetro, se conserva el canal que se registró la primera vez.
+        $canal = self::canal($request)
+            ?? (array_key_exists($invitacion->respuesta_por, Invitacion::CANALES) ? $invitacion->respuesta_por : 'invitado');
+
         $invitacion->update([
             'respuesta' => $datos['respuesta'],
             'comentario' => $datos['comentario'] ?? null,
-            'respuesta_por' => 'invitado',
+            'respuesta_por' => $canal,
             'respondida_at' => now(),
         ]);
 
         return redirect()->route('invitacion.show', $token)->with('respondido', $datos['respuesta']);
+    }
+
+    /** Canal indicado en el enlace (?c=correo | ?c=whatsapp), o null si no viene o no es válido. */
+    private static function canal(Request $request): ?string
+    {
+        $canal = $request->input('c');
+
+        return is_string($canal) && array_key_exists($canal, Invitacion::CANALES) ? $canal : null;
     }
 
     public function calendario(string $token): Response
