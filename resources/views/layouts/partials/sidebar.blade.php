@@ -19,9 +19,7 @@
         <a href="{{ route('dashboard') }}" class="d-flex align-items-center text-decoration-none">
             <img alt="{{ config('academia.nombre') }}" src="{{ asset('assets/media/logos/academia-icon.png') }}" class="h-40px w-40px rounded me-3">
             <span class="d-flex flex-column lh-sm">
-                <span class="text-white fw-bold fs-5">{{ config('academia.nombre') }}</span>
-                <span class="text-gray-500 fs-8">{{ implode(' · ', config('academia.sedes')) }}</span>
-            </span>
+                <span class="text-white fw-bold fs-5">{{ config('academia.nombre') }}</span>            </span>
         </a>
         <button type="button" class="btn btn-icon btn-sm d-lg-none text-gray-500" data-sidebar-close aria-label="Cerrar menú">
             <i class="ki-outline ki-cross fs-2"></i>

@@ -2,10 +2,6 @@
 
 
 @section('title', $config['plural'])
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Academia</li>
-@endsection
-
 @section('acciones')
     @can('contactos.importar')
         <a href="{{ route('contactos.importar', $segmento) }}" class="btn btn-sm btn-light-primary">

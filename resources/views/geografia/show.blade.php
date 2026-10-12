@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', $departamento->nombre)
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('geografia.index') }}" class="text-muted text-hover-primary">Departamentos y municipios</a></li>
-@endsection
-
 @section('acciones')
     <a href="{{ route('geografia.index') }}" class="btn btn-sm btn-light">
         <i class="ki-outline ki-arrow-left fs-2"></i> Volver

@@ -59,7 +59,7 @@
                 </div>
             </div>
             <div class="d-flex flex-center flex-wrap px-5">
-                <span class="text-muted fw-semibold fs-7">{{ config('academia.nombre') }} © {{ now()->year }} · {{ implode(' · ', config('academia.sedes')) }}</span>
+                <span class="text-muted fw-semibold fs-7">{{ config('academia.nombre') }} © {{ now()->year }}</span>
             </div>
         </div>
 
@@ -80,13 +80,8 @@
                     <img alt="{{ config('academia.nombre') }}" src="{{ asset('assets/media/logos/academia-logo.png') }}" class="logo-login">
                 </div>
                 <h1 class="text-white fs-2qx fw-bolder text-center mb-4">{{ config('academia.nombre') }}</h1>
-                <div class="text-white fs-base text-center opacity-75 mb-6">
+                <div class="text-white fs-base text-center opacity-75">
                     Reuniones con clientes y capacitaciones para clientes.
-                </div>
-                <div class="d-flex flex-wrap flex-center gap-2">
-                    @foreach (config('academia.sedes') as $sede)
-                        <span class="badge bg-white bg-opacity-20 text-white fw-semibold fs-7 px-4 py-2">Sede {{ $sede }}</span>
-                    @endforeach
                 </div>
             </div>
         </div>

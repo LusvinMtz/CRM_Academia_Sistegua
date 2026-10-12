@@ -3,10 +3,6 @@
 @php([$estadoTxt, $estadoColor] = $evento->estado_etiqueta)
 
 @section('title', $evento->titulo)
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('eventos.index', $segmento) }}" class="text-muted text-hover-primary">{{ $config['plural'] }}</a></li>
-@endsection
-
 @section('acciones')
     @can('eventos.asistencia')
         @unless ($evento->cancelado_at)

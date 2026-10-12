@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Diseños de certificado')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Formación</li>
-@endsection
-
 @section('acciones')
     @can('certificados.crear')
         <form method="POST" action="{{ route('certificados.create') }}">

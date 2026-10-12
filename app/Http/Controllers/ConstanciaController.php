@@ -113,15 +113,6 @@ class ConstanciaController extends Controller implements HasMiddleware
             : "Se enviaron {$asistentes->count()} constancias por WhatsApp.{$prueba}");
     }
 
-    /** PDF de una constancia por enlace firmado y temporal: WasenderAPI lo descarga para enviarlo por WhatsApp. */
-    public function publica(string $token): Response
-    {
-        $invitacion = Invitacion::with('contacto')->where('token', $token)->where('asistio', true)->firstOrFail();
-
-        return self::pdf($invitacion->evento, collect([$invitacion]))
-            ->stream('constancia-'.str($invitacion->contacto->nombre_completo)->slug().'.pdf');
-    }
-
     /** Página pública para comprobar que una constancia es auténtica. */
     public function verificar(?string $codigo = null): View
     {

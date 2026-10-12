@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Cargar '.mb_strtolower($config['plural']).' desde Excel')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('contactos.index', $segmento) }}" class="text-muted text-hover-primary">{{ $config['plural'] }}</a></li>
-@endsection
-
 @section('content')
     @if ($resultado)
         @php($r = $resultado)

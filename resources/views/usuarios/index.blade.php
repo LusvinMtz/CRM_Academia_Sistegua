@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Usuarios')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Administración</li>
-@endsection
-
 @section('acciones')
     @can('usuarios.crear')
         <a href="{{ route('usuarios.create') }}" class="btn btn-sm btn-primary">

@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Editor de certificado')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('certificados.index') }}" class="text-muted text-hover-primary">Diseños de certificado</a></li>
-@endsection
-
 @section('content')
     <form method="POST" action="{{ route('certificados.update', $plantilla) }}" id="formDiseno">
         @csrf @method('PUT')

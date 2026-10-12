@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Roles y permisos')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Administración</li>
-@endsection
-
 @section('acciones')
     @can('roles.crear')
         <a href="{{ route('roles.create') }}" class="btn btn-sm btn-primary">

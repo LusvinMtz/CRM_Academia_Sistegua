@@ -47,9 +47,6 @@ Route::prefix('registro/{token}')->whereUuid('token')->name('registro.')->middle
 // Verificación pública de constancias (el código viene impreso en el PDF)
 Route::get('/constancia/verificar/{codigo?}', [ConstanciaController::class, 'verificar'])
     ->middleware('throttle:30,1')->name('constancia.verificar');
-// PDF de la constancia por enlace firmado (WasenderAPI lo descarga para enviarlo por WhatsApp)
-Route::get('/constancia/{token}/pdf', [ConstanciaController::class, 'publica'])->whereUuid('token')
-    ->middleware(['signed', 'throttle:30,1'])->name('constancia.publica');
 
 Route::middleware(['auth', 'activo'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
@@ -153,6 +150,8 @@ Route::middleware(['auth', 'activo'])->group(function () {
         Route::get('/eventos.xlsx', 'eventosExcel')->name('eventos.excel');
         Route::get('/personas', 'personas')->name('personas');
         Route::get('/personas.xlsx', 'personasExcel')->name('personas.excel');
+        Route::get('/historial', 'historial')->name('historial');
+        Route::get('/historial.xlsx', 'historialExcel')->name('historial.excel');
     });
 
     Route::get('/invitaciones', [InvitacionController::class, 'index'])->name('invitaciones.index');

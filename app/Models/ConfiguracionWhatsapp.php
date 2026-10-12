@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\CifradoTolerante;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Throwable;
@@ -33,7 +34,7 @@ class ConfiguracionWhatsapp extends Model
     protected function casts(): array
     {
         return [
-            'token' => 'encrypted',
+            'token' => CifradoTolerante::class,
             'pausa_segundos' => 'integer',
             'proteccion' => 'boolean',
         ];

@@ -232,6 +232,49 @@ class Fase5Test extends TestCase
         $this->actingAs($this->admin)->get(route('contactos.edit', ['clientes', $ana]))->assertOk()->assertSee('Historial de participación')->assertSee('Asistió');
     }
 
+    public function test_reporte_historial_por_persona(): void
+    {
+        $ana = $this->contacto(Contacto::CLIENTE, ['nombres' => 'Ana']);
+        $cumplio = $this->evento(Evento::CAPACITACION, ['titulo' => 'Curso cumplido', 'inicio' => now()->subDays(10), 'fin' => now()->subDays(10)->addHours(2)]);
+        $falto = $this->evento(Evento::CAPACITACION, ['titulo' => 'Curso fallado', 'inicio' => now()->subDays(5), 'fin' => now()->subDays(5)->addHours(2)]);
+        $proximo = $this->evento(Evento::CAPACITACION, ['titulo' => 'Curso próximo', 'inicio' => now()->addDays(5), 'fin' => now()->addDays(5)->addHours(2)]);
+        Invitacion::create(['evento_id' => $cumplio->id, 'contacto_id' => $ana->id, 'correo' => $ana->correo, 'estado_envio' => 'enviada', 'respuesta' => 'confirmada', 'asistio' => true]);
+        Invitacion::create(['evento_id' => $falto->id, 'contacto_id' => $ana->id, 'correo' => $ana->correo, 'estado_envio' => 'enviada', 'respuesta' => 'confirmada', 'asistio' => false]);
+        Invitacion::create(['evento_id' => $proximo->id, 'contacto_id' => $ana->id, 'correo' => $ana->correo, 'estado_envio' => 'enviada']);
+
+        // Sin filtrar ya muestra a cada persona con sus capacitaciones
+        $this->actingAs($this->admin)->get(route('reportes.historial'))
+            ->assertOk()->assertSeeInOrder([$ana->nombre_completo, 'de 2 asistidas', '2 confirmó', 'Curso próximo', 'Curso fallado', 'Confirmó y faltó', 'Curso cumplido']);
+        $this->actingAs($this->admin)->get(route('reportes.historial', ['buscar' => 'Nadie Existe']))
+            ->assertOk()->assertDontSee('Curso cumplido');
+
+        $xlsx = $this->actingAs($this->admin)->get(route('reportes.historial.excel'));
+        $ruta = tempnam(sys_get_temp_dir(), 'rep').'.xlsx';
+        file_put_contents($ruta, $xlsx->streamedContent());
+        $filas = IOFactory::load($ruta)->getSheet(0)->toArray();
+        $this->assertSame($ana->nombre_completo, $filas[4][0]);
+        $this->assertSame('Confirmó y asistió', $filas[6][10]);
+
+        $this->actingAs($this->admin)->get(route('reportes.historial', ['contacto' => $ana->id]))
+            ->assertOk()
+            ->assertSeeInOrder(['Curso próximo', 'Aún no se realiza', 'Curso fallado', 'Confirmó y faltó', 'Curso cumplido', 'Confirmó y asistió'])
+            ->assertSee('50% de las invitaciones')
+            ->assertSee('1 después de confirmar');
+
+        $xlsx = $this->actingAs($this->admin)->get(route('reportes.historial.excel', ['contacto' => $ana->id]));
+        $ruta = tempnam(sys_get_temp_dir(), 'rep').'.xlsx';
+        file_put_contents($ruta, $xlsx->streamedContent());
+        $filas = IOFactory::load($ruta)->getSheet(0)->toArray();
+        $this->assertSame('Curso próximo', $filas[4][1]);
+        $this->assertSame('Confirmó y faltó', $filas[5][8]);
+        $this->assertSame('Asistió', $filas[6][7]);
+
+        // Un director de otra sede no puede ver el historial
+        $otro = User::factory()->create(['sede_id' => Sede::whereKeyNot($ana->sede_id)->value('id')]);
+        $otro->assignRole('Director de sede');
+        $this->actingAs($otro)->get(route('reportes.historial', ['contacto' => $ana->id]))->assertNotFound();
+    }
+
     public function test_permisos_de_asistencia_y_reportes(): void
     {
         $evento = $this->evento();

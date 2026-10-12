@@ -5,12 +5,6 @@
 @endphp
 
 @section('title', 'Asistencia')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('eventos.index', $segmento) }}" class="text-muted text-hover-primary">{{ $config['plural'] }}</a></li>
-    <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
-    <li class="breadcrumb-item text-muted"><a href="{{ route('eventos.show', [$segmento, $evento]) }}" class="text-muted text-hover-primary">{{ \Illuminate\Support\Str::limit($evento->titulo, 40) }}</a></li>
-@endsection
-
 @section('acciones')
     @unless ($evento->cancelado_at)
         <a href="{{ route('asistencia.qr', [$segmento, $evento]) }}" class="btn btn-sm btn-light-success">

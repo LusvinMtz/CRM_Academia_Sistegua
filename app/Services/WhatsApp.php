@@ -69,11 +69,27 @@ class WhatsApp
         $this->enviar(['to' => $this->destino($telefono), 'text' => $texto]);
     }
 
-    /** El documento debe estar en una dirección pública: WasenderAPI lo descarga de ahí. */
-    public function documento(string $telefono, string $url, string $nombreArchivo, ?string $texto = null): void
+    /**
+     * Envía un archivo (p. ej. un PDF). Primero se sube a WasenderAPI, que devuelve una dirección
+     * pública válida por 24 horas; así no depende de que este sistema sea accesible desde internet
+     * (WasenderAPI rechaza direcciones como localhost o de la red interna).
+     */
+    public function documento(string $telefono, string $contenido, string $nombreArchivo, ?string $texto = null, string $mime = 'application/pdf'): void
     {
+        $destino = $this->destino($telefono);
+
+        if ($this->config->enModoPrueba()) {
+            $this->enviar(array_filter(['to' => $destino, 'fileName' => $nombreArchivo, 'bytes' => strlen($contenido), 'text' => $texto]));
+
+            return;
+        }
+
+        $url = $this->solicitud(fn ($http) => $http->post(self::URL.'/upload', [
+            'base64' => 'data:'.$mime.';base64,'.base64_encode($contenido),
+        ]))->json('publicUrl') ?? throw new ErrorWhatsApp('WasenderAPI no devolvió la dirección del archivo subido.');
+
         $this->enviar(array_filter([
-            'to' => $this->destino($telefono), 'documentUrl' => $url, 'fileName' => $nombreArchivo, 'text' => $texto,
+            'to' => $destino, 'documentUrl' => $url, 'fileName' => $nombreArchivo, 'text' => $texto,
         ]));
     }
 

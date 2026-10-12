@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'QR de asistencia')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('eventos.show', [$segmento, $evento]) }}" class="text-muted text-hover-primary">{{ \Illuminate\Support\Str::limit($evento->titulo, 40) }}</a></li>
-@endsection
-
 @section('acciones')
     <a href="{{ route('asistencia.qr.png', [$segmento, $evento]) }}" class="btn btn-sm btn-light"><i class="ki-outline ki-file-down fs-2"></i> Descargar imagen</a>
     <button type="button" class="btn btn-sm btn-light" onclick="window.print()"><i class="ki-outline ki-printer fs-2"></i> Imprimir</button>

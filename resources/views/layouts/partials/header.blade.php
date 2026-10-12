@@ -9,13 +9,14 @@
             </button>
         </div>
 
-        <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 d-lg-none">
-            <a href="{{ route('dashboard') }}">
+        <div class="d-flex align-items-center flex-grow-1 min-w-0">
+            <a href="{{ route('dashboard') }}" class="d-lg-none me-3 flex-shrink-0">
                 <img alt="{{ config('academia.nombre') }}" src="{{ asset('assets/media/logos/academia-icon.png') }}" class="h-35px rounded">
             </a>
+            <h1 class="text-gray-900 fw-bold fs-3 my-0 text-truncate">@yield('title', 'Inicio')</h1>
         </div>
 
-        <div class="d-flex align-items-stretch justify-content-end flex-lg-grow-1">
+        <div class="d-flex align-items-stretch justify-content-end flex-shrink-0">
             <div class="app-navbar flex-shrink-0">
 
                 {{-- Modo claro / oscuro --}}

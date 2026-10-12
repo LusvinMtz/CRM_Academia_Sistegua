@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', $contacto->nombre_completo)
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('contactos.index', $segmento) }}" class="text-muted text-hover-primary">{{ $config['plural'] }}</a></li>
-@endsection
-
 @section('content')
     <form method="POST" action="{{ route('contactos.update', [$segmento, $contacto]) }}" novalidate>
         @csrf @method('PUT')

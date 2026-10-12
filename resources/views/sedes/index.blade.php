@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Sedes')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Academia</li>
-@endsection
-
 @section('acciones')
     @can('sedes.crear')
         <a href="{{ route('sedes.create') }}" class="btn btn-sm btn-primary">

@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', $config['plural'])
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Eventos</li>
-@endsection
-
 @section('acciones')
     @can('eventos.crear')
         <a href="{{ route('eventos.create', $segmento) }}" class="btn btn-sm btn-primary">

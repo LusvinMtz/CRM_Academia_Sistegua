@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Http\Controllers\ConstanciaController;
 use App\Models\Invitacion;
 use App\Services\ErrorWhatsApp;
 use App\Services\WhatsApp;
@@ -11,7 +12,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /**
@@ -42,7 +42,7 @@ class EnviarWhatsAppEvento implements ShouldQueue
             if ($this->motivo === 'constancia') {
                 $whatsapp->documento(
                     $telefono,
-                    URL::temporarySignedRoute('constancia.publica', now()->addDays(30), ['token' => $inv->token]),
+                    ConstanciaController::pdf($inv->evento, collect([$inv]))->output(),
                     'constancia-'.str($inv->contacto->nombre_completo)->slug().'.pdf',
                     $this->mensaje,
                 );

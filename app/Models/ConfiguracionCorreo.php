@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\CifradoTolerante;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Throwable;
@@ -43,7 +44,7 @@ class ConfiguracionCorreo extends Model
     {
         return [
             'puerto' => 'integer',
-            'password' => 'encrypted',
+            'password' => CifradoTolerante::class,
         ];
     }
 

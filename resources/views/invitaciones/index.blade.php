@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Invitaciones')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Comunicación</li>
-@endsection
-
 @section('content')
     <div class="row g-5 g-xl-8 mb-8">
         @foreach ([

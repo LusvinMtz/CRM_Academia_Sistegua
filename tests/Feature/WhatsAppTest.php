@@ -244,25 +244,24 @@ class WhatsAppTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_constancia_por_whatsapp_con_enlace_firmado(): void
+    public function test_constancia_por_whatsapp_sube_el_pdf_a_wasender(): void
     {
         $this->configurar();
+        Http::fake([
+            '*/upload' => Http::response(['success' => true, 'publicUrl' => 'https://wasenderapi.com/media/abc.pdf']),
+            '*/send-message' => Http::response(['success' => true]),
+        ]);
         $this->seed(\Database\Seeders\CertificadosSeeder::class);
         $c = $this->cliente();
-        $inv = Invitacion::registrarAsistencia($this->evento, $c, true, $this->admin->id, 'manual');
+        Invitacion::registrarAsistencia($this->evento, $c, true, $this->admin->id, 'manual');
 
         $this->actingAs($this->admin)->post(route('constancias.enviar', $this->evento), ['canal' => 'whatsapp'])
             ->assertSessionHas('success', fn ($m) => str_contains($m, '1 constancias por WhatsApp'));
 
-        $url = null;
-        Http::assertSent(function (Request $r) use (&$url) {
-            $url = $r['documentUrl'];
-
-            return str_ends_with($r['fileName'], '.pdf') && str_contains($url, 'signature=');
-        });
-
-        auth()->logout();
-        $this->get($url)->assertOk()->assertHeader('content-type', 'application/pdf');
-        $this->get(route('constancia.publica', $inv->token))->assertForbidden(); // sin firma
+        // Se sube el PDF (no un enlace a este sistema, que puede no ser accesible desde internet)
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/upload')
+            && str_starts_with($r['base64'], 'data:application/pdf;base64,JVBERi')); // "%PDF"
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/send-message')
+            && $r['documentUrl'] === 'https://wasenderapi.com/media/abc.pdf' && str_ends_with($r['fileName'], '.pdf'));
     }
 }

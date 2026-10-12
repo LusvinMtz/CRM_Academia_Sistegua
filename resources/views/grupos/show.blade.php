@@ -6,10 +6,6 @@
 @endphp
 
 @section('title', $grupo->nombre.($grupo->activo ? '' : ' (inactivo)'))
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('grupos.index') }}" class="text-muted text-hover-primary">Grupos</a></li>
-@endsection
-
 @section('acciones')
     @if ($puedeEditar)
         <a href="{{ route('grupos.edit', $grupo) }}" class="btn btn-sm btn-light">

@@ -7,4 +7,8 @@
         <a class="nav-link text-active-primary {{ request()->routeIs('reportes.personas') ? 'active' : '' }}"
            href="{{ route('reportes.personas', request()->only(['desde', 'hasta', 'sede'])) }}">Por persona</a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link text-active-primary {{ request()->routeIs('reportes.historial') ? 'active' : '' }}"
+           href="{{ route('reportes.historial') }}">Historial por persona</a>
+    </li>
 </ul>

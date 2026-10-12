@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Grupos')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Academia</li>
-@endsection
-
 @section('acciones')
     @can('contactos.editar')
         <a href="{{ route('grupos.create') }}" class="btn btn-sm btn-primary">

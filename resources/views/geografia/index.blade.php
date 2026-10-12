@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Departamentos y municipios')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Administración</li>
-@endsection
-
 @section('content')
     <div class="card">
         <div class="card-header border-0 pt-6">

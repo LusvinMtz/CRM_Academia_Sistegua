@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Plantillas de correo')
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted">Comunicación</li>
-@endsection
-
 @section('acciones')
     @can('campanias.crear')
         <a href="{{ route('plantillas.create') }}" class="btn btn-sm btn-primary"><i class="ki-outline ki-plus fs-2"></i> Nueva plantilla</a>

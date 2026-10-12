@@ -70,6 +70,17 @@
 }
 @media (min-width: 992px) { .sidebar-overlay { display: none !important; } }
 
+/* La barra superior es fija, pero la plantilla la deja transparente y solo le da fondo
+   al hacer scroll mediante su propio JavaScript (que no se usa); se pinta siempre sólida
+   para que el contenido no se vea por detrás. */
+#kt_app_header {
+    background-color: var(--bs-app-header-minimize-bg-color);
+    box-shadow: var(--bs-app-header-minimize-box-shadow);
+}
+
+/* Reporte de historial: separa con una línea marcada el grupo de cada persona */
+.tabla-historial tr.inicio-persona > td { border-top: 2px solid var(--bs-gray-300); }
+
 /* Ícono del botón de tema */
 .tema-oscuro { display: none; }
 [data-bs-theme="dark"] .tema-oscuro { display: inline-block; }

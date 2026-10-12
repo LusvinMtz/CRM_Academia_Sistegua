@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('title', $config['nuevo'])
-@section('breadcrumb')
-    <li class="breadcrumb-item text-muted"><a href="{{ route('eventos.index', $segmento) }}" class="text-muted text-hover-primary">{{ $config['plural'] }}</a></li>
-@endsection
-
 @section('content')
     @isset($duplicado)
         <div class="alert bg-light-primary border border-primary border-dashed d-flex align-items-center p-4 mb-6">

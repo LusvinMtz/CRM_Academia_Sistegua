@@ -40,6 +40,9 @@
                                 @else
                                     <span class="text-gray-900 fw-bold">{{ $c->nombre_completo }}</span>
                                 @endcan
+                                <a href="{{ route('reportes.historial', ['contacto' => $c->id]) }}" class="ms-1 text-muted text-hover-primary" title="Ver historial de capacitaciones">
+                                    <i class="ki-outline ki-time fs-5"></i>
+                                </a>
                                 <div class="fs-7 text-muted">
                                     {{ trim($c->empresa.' · '.$c->oficio, ' ·') ?: '—' }}
                                 </div>
