@@ -159,14 +159,28 @@
             modo.addEventListener('change', mostrar);
             mostrar();
 
-            document.querySelectorAll('[data-proveedor]').forEach(function (btn) {
+            // Resalta el proveedor cuyo servidor coincide con el escrito (también al abrir la página)
+            var host = document.getElementById('host');
+            var botones = document.querySelectorAll('[data-proveedor]');
+            function resaltar() {
+                botones.forEach(function (btn) {
+                    var activo = JSON.parse(btn.dataset.proveedor).host === host.value.trim().toLowerCase();
+                    btn.classList.toggle('btn-primary', activo);
+                    btn.classList.toggle('btn-light', !activo);
+                    btn.setAttribute('aria-pressed', activo);
+                });
+            }
+            botones.forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var p = JSON.parse(btn.dataset.proveedor);
-                    document.getElementById('host').value = p.host;
+                    host.value = p.host;
                     document.getElementById('puerto').value = p.puerto;
                     document.getElementById('cifrado').value = p.cifrado;
+                    resaltar();
                 });
             });
+            host.addEventListener('input', resaltar);
+            resaltar();
         })();
     </script>
 @endpush

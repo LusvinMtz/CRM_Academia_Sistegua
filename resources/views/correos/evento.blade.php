@@ -4,6 +4,13 @@
         ? $message->embed(public_path('assets/media/logos/academia-icon.png'))
         : asset('assets/media/logos/academia-icon.png');
     $cancelado = $motivo === 'cancelacion';
+    // Arte del evento: incrustado en el envío real, por URL en la vista previa
+    $imagen = null;
+    if (! $cancelado && $evento->rutaImagen()) {
+        $imagen = isset($message) && method_exists($message, 'embed')
+            ? $message->embed($evento->rutaImagen())
+            : route('eventos.imagen', [\App\Models\Evento::segmentoDe($evento->tipo), $evento]);
+    }
     $etiqueta = [
         'invitacion' => $evento->tipo === 'reunion' ? 'Invitación a reunión' : 'Convocatoria a capacitación',
         'recordatorio' => 'Recordatorio',
@@ -94,24 +101,10 @@
                                 </tr>
                             </table>
                             <div style="font-size:13px; color:#99a1b7; margin-top:6px;">Adjuntamos un archivo para agregar la actividad a su calendario.</div>
+                        @endif
 
-                            @php
-                                $qrPng = \App\Services\Qr::png($urlPase, 6);
-                                $qrSrc = isset($message) && method_exists($message, 'embedData')
-                                    ? $message->embedData($qrPng, 'pase-de-entrada.png', 'image/png')
-                                    : 'data:image/png;base64,'.base64_encode($qrPng);
-                            @endphp
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px; border-top:1px dashed #dbdfe9;">
-                                <tr>
-                                    <td style="padding-top:20px; width:150px; vertical-align:top;">
-                                        <img src="{{ $qrSrc }}" width="140" height="140" alt="Pase de entrada" style="display:block; border:0;">
-                                    </td>
-                                    <td style="padding:20px 0 0 16px; vertical-align:middle; font-size:14px; line-height:1.5; color:#4b5675;">
-                                        <strong style="color:#071437; font-size:15px;">Su pase de entrada</strong><br>
-                                        Al llegar, muestre este código en la entrada para registrar su asistencia rápidamente.
-                                    </td>
-                                </tr>
-                            </table>
+                        @if ($imagen)
+                            <img src="{{ $imagen }}" alt="{{ $evento->titulo }}" width="544" style="display:block; width:100%; max-width:544px; height:auto; border:0; border-radius:10px; margin:24px 0 0;">
                         @endif
                     </td>
                 </tr>

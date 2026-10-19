@@ -170,6 +170,26 @@
                 </span>
             </label>
         </div>
+
+        <div class="separator separator-dashed my-10"></div>
+        <h4 class="fw-bold text-gray-800 mb-2">Imagen o arte del evento</h4>
+        <div class="text-muted fs-7 mb-5">Opcional. Se envía junto con la invitación por correo y por WhatsApp.</div>
+        <div class="d-flex flex-column flex-md-row gap-5 align-items-md-start">
+            <img id="imagenVista" alt="Vista previa de la imagen" class="rounded border mw-100 mh-200px {{ $evento->exists && $evento->rutaImagen() ? '' : 'd-none' }}"
+                 src="{{ $evento->exists && $evento->rutaImagen() ? route('eventos.imagen', [$segmento, $evento]) : '' }}">
+            <div class="flex-grow-1">
+                <input type="file" id="imagen" name="imagen" accept="image/png,image/jpeg"
+                       class="form-control form-control-solid @error('imagen') is-invalid @enderror">
+                @error('imagen') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                <div class="form-text">JPG o PNG de hasta 5 MB.</div>
+                @if ($evento->exists && $evento->rutaImagen())
+                    <label class="form-check form-check-sm form-check-custom form-check-solid mt-3">
+                        <input class="form-check-input" type="checkbox" name="quitar_imagen" value="1" id="quitarImagen">
+                        <span class="form-check-label">Quitar la imagen actual</span>
+                    </label>
+                @endif
+            </div>
+        </div>
     </div>
     @if ($evento->exists && $evento->tieneInvitacionesEnviadas())
         <div class="px-lg-10 px-6 pb-6">
@@ -190,6 +210,17 @@
 
 @push('scripts')
     <script>
+        // Vista previa de la imagen elegida
+        document.getElementById('imagen').addEventListener('change', (e) => {
+            const vista = document.getElementById('imagenVista');
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+            vista.src = URL.createObjectURL(archivo);
+            vista.classList.remove('d-none');
+            const quitar = document.getElementById('quitarImagen');
+            if (quitar) quitar.checked = false;
+        });
+
         (function () {
             var sede = document.getElementById('sede_id');
             var lugar = document.getElementById('lugar');

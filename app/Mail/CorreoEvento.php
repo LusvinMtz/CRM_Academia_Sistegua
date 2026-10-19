@@ -47,7 +47,6 @@ class CorreoEvento extends Mailable
                 'urlSi' => $this->invitacion->url('si', Invitacion::CORREO),
                 'urlNo' => $this->invitacion->url('no', Invitacion::CORREO),
                 'urlBaja' => route('invitacion.baja', $this->invitacion->token),
-                'urlPase' => $this->invitacion->urlEscaneo(),
             ],
         );
     }

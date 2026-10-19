@@ -92,6 +92,7 @@ Route::middleware(['auth', 'activo'])->group(function () {
             Route::patch('/{evento}/reactivar', 'reactivar')->name('reactivar');
             Route::get('/{evento}/duplicar', 'duplicar')->name('duplicar');
             Route::get('/{evento}/calendario.ics', 'calendario')->name('calendario');
+            Route::get('/{evento}/imagen', 'imagen')->name('imagen');
         });
 
     // Invitaciones de un evento

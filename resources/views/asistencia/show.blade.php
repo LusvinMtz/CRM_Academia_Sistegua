@@ -6,6 +6,7 @@
 
 @section('title', 'Asistencia')
 @section('acciones')
+    <a href="{{ route('eventos.show', [$segmento, $evento]) }}" class="btn btn-sm text-white" style="background-color: #f97316; border-color: #f97316;"><i class="ki-outline ki-arrow-left fs-2 text-white"></i> Regresar</a>
     @unless ($evento->cancelado_at)
         <a href="{{ route('asistencia.qr', [$segmento, $evento]) }}" class="btn btn-sm btn-light-success">
             <i class="ki-outline ki-scan-barcode fs-2"></i> QR de asistencia

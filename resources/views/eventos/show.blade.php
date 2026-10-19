@@ -17,15 +17,13 @@
     <a href="{{ route('eventos.calendario', [$segmento, $evento]) }}" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Para Google Calendar, Outlook o el celular">
         <i class="ki-outline ki-calendar-add fs-2"></i> Agregar al calendario
     </a>
-    @can('eventos.crear')
-        <a href="{{ route('eventos.duplicar', [$segmento, $evento]) }}" class="btn btn-sm btn-light">
-            <i class="ki-outline ki-copy fs-2"></i> Duplicar
-        </a>
-    @endcan
     @can('eventos.editar')
-        <a href="{{ route('eventos.edit', [$segmento, $evento]) }}" class="btn btn-sm btn-primary">
-            <i class="ki-outline ki-pencil fs-2"></i> Editar
-        </a>
+        {{-- Con invitaciones ya enviadas no se edita: solo posponer o anular, avisando por correo --}}
+        @unless ($tieneEnviadas)
+            <a href="{{ route('eventos.edit', [$segmento, $evento]) }}" class="btn btn-sm btn-primary">
+                <i class="ki-outline ki-pencil fs-2"></i> Editar
+            </a>
+        @endunless
     @endcan
 @endsection
 
@@ -96,6 +94,14 @@
                         <div class="separator separator-dashed my-8"></div>
                         <h5 class="fw-bold text-gray-800 mb-3">Descripción</h5>
                         <div class="text-gray-700 fs-6" style="white-space: pre-line">{{ $evento->descripcion }}</div>
+                    @endif
+
+                    @if ($evento->rutaImagen())
+                        <div class="separator separator-dashed my-8"></div>
+                        <h5 class="fw-bold text-gray-800 mb-3">Imagen del evento</h5>
+                        <a href="{{ route('eventos.imagen', [$segmento, $evento]) }}" target="_blank">
+                            <img src="{{ route('eventos.imagen', [$segmento, $evento]) }}" alt="Imagen de {{ $evento->titulo }}" class="rounded border mw-100 mh-400px">
+                        </a>
                     @endif
                 </div>
             </div>

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Evento extends Model
 {
@@ -33,7 +34,7 @@ class Evento extends Model
     protected $fillable = [
         'tipo', 'titulo', 'descripcion', 'sede_id', 'modalidad', 'inicio', 'fin',
         'lugar', 'enlace', 'facilitador', 'cupo', 'para_todos', 'recordatorio_automatico', 'creado_por',
-        'plantilla_certificado_id',
+        'plantilla_certificado_id', 'imagen',
     ];
 
     protected $attributes = ['para_todos' => false, 'recordatorio_automatico' => true];
@@ -49,6 +50,22 @@ class Evento extends Model
             'para_todos' => 'boolean',
             'recordatorio_automatico' => 'boolean',
         ];
+    }
+
+    /** Carpeta (en storage/app) donde se guardan las imágenes de los eventos. */
+    public const CARPETA_IMAGENES = 'eventos';
+
+    /** Ruta absoluta del arte del evento, o null si no tiene o el archivo ya no existe. */
+    public function rutaImagen(): ?string
+    {
+        return $this->imagen && Storage::exists($this->imagen) ? Storage::path($this->imagen) : null;
+    }
+
+    public function borrarImagen(): void
+    {
+        if ($this->imagen) {
+            Storage::delete($this->imagen);
+        }
     }
 
     /** Momento en que sale el recordatorio automático (p. ej. el día anterior a las 07:00). */

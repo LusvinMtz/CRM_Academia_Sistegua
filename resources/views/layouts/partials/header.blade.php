@@ -23,8 +23,8 @@
                 <div class="app-navbar-item ms-1 ms-md-3">
                     <button type="button" class="btn btn-icon btn-custom btn-icon-muted btn-active-light btn-active-color-primary w-35px h-35px"
                             data-tema-toggle title="Cambiar modo claro/oscuro">
-                        <i class="ki-outline ki-night-day fs-1 tema-claro"></i>
-                        <i class="ki-outline ki-moon fs-1 tema-oscuro"></i>
+                        <i class="ki-outline ki-moon fs-1 tema-claro"></i>
+                        <i class="ki-outline ki-night-day fs-1 tema-oscuro"></i>
                     </button>
                 </div>
 

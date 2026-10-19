@@ -93,6 +93,32 @@ class WhatsApp
         ]));
     }
 
+    /**
+     * Envía una imagen con el texto como pie. Igual que los documentos, se sube primero a WasenderAPI;
+     * la dirección se guarda unas horas para no subir la misma imagen en cada mensaje.
+     * WhatsApp limita el pie de foto, así que un texto largo se manda aparte, después de la imagen.
+     */
+    public function imagen(string $telefono, string $ruta, ?string $texto = null): void
+    {
+        $destino = $this->destino($telefono);
+        $pieCorto = $texto === null || mb_strlen($texto) <= 1000;
+
+        if ($this->config->enModoPrueba()) {
+            $this->enviar(array_filter(['to' => $destino, 'imagen' => basename($ruta), 'text' => $texto]));
+
+            return;
+        }
+
+        $url = Cache::remember('whatsapp:imagen:'.md5($ruta.'|'.filemtime($ruta)), now()->addHours(20), fn () => $this->solicitud(
+            fn ($http) => $http->post(self::URL.'/upload', ['base64' => 'data:'.mime_content_type($ruta).';base64,'.base64_encode(file_get_contents($ruta))])
+        )->json('publicUrl') ?? throw new ErrorWhatsApp('WasenderAPI no devolvió la dirección de la imagen subida.'));
+
+        $this->enviar(array_filter(['to' => $destino, 'imageUrl' => $url, 'text' => $pieCorto ? $texto : null]));
+        if (! $pieCorto) {
+            $this->enviar(['to' => $destino, 'text' => $texto]);
+        }
+    }
+
     /** Estado de la sesión de WhatsApp vinculada al token (connected, need_scan, …). */
     public function estado(): string
     {

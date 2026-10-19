@@ -16,6 +16,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -28,7 +29,7 @@ class EventoController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:eventos.ver', only: ['index', 'show', 'calendario']),
+            new Middleware('permission:eventos.ver', only: ['index', 'show', 'calendario', 'imagen']),
             new Middleware('permission:eventos.crear', only: ['create', 'store', 'duplicar']),
             new Middleware('permission:eventos.editar', only: ['edit', 'update', 'cancelar', 'posponer', 'reactivar']),
             new Middleware('permission:eventos.eliminar', only: ['destroy']),
@@ -83,6 +84,7 @@ class EventoController extends Controller implements HasMiddleware
 
         $evento = Evento::create($datos + ['tipo' => $config['tipo'], 'creado_por' => $request->user()->id]);
         $evento->grupos()->sync($grupos);
+        $this->guardarImagen($request, $evento);
 
         return redirect()->route('eventos.show', [$tipo, $evento])
             ->with('success', ucfirst($config['singular'])." \"{$evento->titulo}\" programada.");
@@ -145,10 +147,14 @@ class EventoController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function edit(Request $request, string $tipo, Evento $evento): View
+    public function edit(Request $request, string $tipo, Evento $evento): View|RedirectResponse
     {
         $config = $this->config($tipo);
         $this->autorizar($request, $evento, $config['tipo']);
+
+        if ($evento->tieneInvitacionesEnviadas()) {
+            return redirect()->route('eventos.show', [$tipo, $evento])->with('error', 'Ya se enviaron invitaciones: no se puede editar, solo posponer o anular.');
+        }
 
         return view('eventos.edit', $this->datosFormulario($request, $tipo, $evento->load('grupos')));
     }
@@ -157,6 +163,11 @@ class EventoController extends Controller implements HasMiddleware
     {
         $config = $this->config($tipo);
         $this->autorizar($request, $evento, $config['tipo']);
+
+        if ($evento->tieneInvitacionesEnviadas()) {
+            return redirect()->route('eventos.show', [$tipo, $evento])->with('error', 'Ya se enviaron invitaciones: no se puede editar, solo posponer o anular.');
+        }
+
         [$datos, $grupos] = $this->validar($request, $config);
 
         $fechaAnterior = $evento->inicio->copy();
@@ -170,6 +181,7 @@ class EventoController extends Controller implements HasMiddleware
         }
         $evento->save();
         $evento->grupos()->sync($grupos);
+        $this->guardarImagen($request, $evento);
 
         // Con invitaciones ya enviadas, todo cambio de fecha, hora o lugar se avisa siempre por correo
         $mensaje = 'Se guardaron los cambios.';
@@ -194,6 +206,7 @@ class EventoController extends Controller implements HasMiddleware
         }
 
         $titulo = $evento->titulo;
+        $evento->borrarImagen();
         $evento->delete();
 
         return redirect()->route('eventos.index', $tipo)->with('success', "Se eliminó \"{$titulo}\".");
@@ -285,9 +298,20 @@ class EventoController extends Controller implements HasMiddleware
         $copia = $evento->replicate(['cancelado_at', 'motivo_cancelacion', 'creado_por']);
         $copia->inicio = null;
         $copia->fin = null;
+        $copia->imagen = null;
         $copia->setRelation('grupos', $evento->grupos);
 
         return view('eventos.create', $this->datosFormulario($request, $tipo, $copia) + ['duplicado' => $evento]);
+    }
+
+    /** Arte del evento, para verlo en la ficha y en el formulario. */
+    public function imagen(Request $request, string $tipo, Evento $evento): Response
+    {
+        $config = $this->config($tipo);
+        $this->autorizar($request, $evento, $config['tipo']);
+        abort_unless($evento->rutaImagen(), 404);
+
+        return response(Storage::get($evento->imagen), 200, ['Content-Type' => Storage::mimeType($evento->imagen)]);
     }
 
     /** Archivo .ics para agregar el evento a Google Calendar, Outlook o el celular. */
@@ -360,6 +384,18 @@ class EventoController extends Controller implements HasMiddleware
         abort_if($sede && $evento->sede_id !== $sede, 403);
     }
 
+    /** Guarda el arte subido (reemplazando el anterior) o lo quita si así se pidió. */
+    private function guardarImagen(Request $request, Evento $evento): void
+    {
+        if ($request->hasFile('imagen')) {
+            $evento->borrarImagen();
+            $evento->update(['imagen' => $request->file('imagen')->store(Evento::CARPETA_IMAGENES)]);
+        } elseif ($request->boolean('quitar_imagen') && $evento->imagen) {
+            $evento->borrarImagen();
+            $evento->update(['imagen' => null]);
+        }
+    }
+
     private function datosFormulario(Request $request, string $segmento, Evento $evento): array
     {
         return [
@@ -392,12 +428,17 @@ class EventoController extends Controller implements HasMiddleware
             'recordatorio_automatico' => ['boolean'],
             'grupos' => ['array'],
             'grupos.*' => ['integer'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'quitar_imagen' => ['boolean'],
         ], [
             'hora_fin.after' => 'La hora de fin debe ser posterior a la de inicio.',
             'lugar.required_if' => 'Indique el lugar de la actividad presencial.',
             'enlace.required_if' => 'Pegue el enlace de Zoom, Meet o Teams para la actividad virtual.',
             'enlace.url' => 'El enlace debe ser una dirección web completa (que empiece con https://).',
             'sede_id.in' => 'Seleccione una sede válida.',
+            'imagen.image' => 'El archivo debe ser una imagen.',
+            'imagen.mimes' => 'La imagen debe ser JPG o PNG.',
+            'imagen.max' => 'La imagen no puede pesar más de 5 MB.',
         ], [
             'sede_id' => 'sede', 'hora_inicio' => 'hora de inicio', 'hora_fin' => 'hora de fin',
             'titulo' => 'título', 'descripcion' => 'descripción',

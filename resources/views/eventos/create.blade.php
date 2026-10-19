@@ -8,7 +8,7 @@
             <span class="fw-semibold text-gray-800">Copia de "{{ $duplicado->titulo }}". Elija la nueva fecha y revise los datos antes de guardar.</span>
         </div>
     @endisset
-    <form method="POST" action="{{ route('eventos.store', $segmento) }}" novalidate>
+    <form method="POST" action="{{ route('eventos.store', $segmento) }}" enctype="multipart/form-data" novalidate>
         @csrf
         @include('eventos._form')
     </form>

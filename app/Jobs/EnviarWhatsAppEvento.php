@@ -46,6 +46,9 @@ class EnviarWhatsAppEvento implements ShouldQueue
                     'constancia-'.str($inv->contacto->nombre_completo)->slug().'.pdf',
                     $this->mensaje,
                 );
+            } elseif ($this->motivo !== 'cancelacion' && $inv->evento->rutaImagen()) {
+                // Con arte del evento: la imagen sale con el mensaje como pie de foto
+                $whatsapp->imagen($telefono, $inv->evento->rutaImagen(), $this->texto($inv));
             } else {
                 $whatsapp->texto($telefono, $this->texto($inv));
             }

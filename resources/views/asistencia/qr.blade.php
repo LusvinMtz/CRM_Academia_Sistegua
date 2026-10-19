@@ -2,6 +2,7 @@
 
 @section('title', 'QR de asistencia')
 @section('acciones')
+    <a href="{{ route('eventos.show', [$segmento, $evento]) }}" class="btn btn-sm text-white" style="background-color: #f97316; border-color: #f97316;"><i class="ki-outline ki-arrow-left fs-2 text-white"></i> Regresar</a>
     <a href="{{ route('asistencia.qr.png', [$segmento, $evento]) }}" class="btn btn-sm btn-light"><i class="ki-outline ki-file-down fs-2"></i> Descargar imagen</a>
     <button type="button" class="btn btn-sm btn-light" onclick="window.print()"><i class="ki-outline ki-printer fs-2"></i> Imprimir</button>
     <button type="button" class="btn btn-sm btn-primary" data-pantalla-completa><i class="ki-outline ki-maximize fs-2"></i> Proyectar</button>

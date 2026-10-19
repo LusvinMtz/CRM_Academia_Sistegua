@@ -82,9 +82,9 @@
 .tabla-historial tr.inicio-persona > td { border-top: 2px solid var(--bs-gray-300); }
 
 /* Ícono del botón de tema */
-.tema-oscuro { display: none; }
-[data-bs-theme="dark"] .tema-oscuro { display: inline-block; }
-[data-bs-theme="dark"] .tema-claro { display: none; }
+.tema-oscuro { display: none !important; }
+[data-bs-theme="dark"] .tema-oscuro { display: inline-block !important; }
+[data-bs-theme="dark"] .tema-claro { display: none !important; }
 
 .menu-usuario { min-width: 290px; }
 .menu-usuario .dropdown-item { font-weight: 500; color: var(--bs-gray-700); }
