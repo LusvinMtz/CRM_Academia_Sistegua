@@ -1,18 +1,12 @@
 <div class="card">
     <div class="card-body p-lg-10">
         <div class="row g-6">
-            <div class="col-md-6">
+            <div class="col-md-9">
+                <input type="hidden" name="tipo_evento" value="{{ \App\Models\Evento::CAPACITACION }}">
                 <label for="nombre" class="required form-label fw-semibold">Nombre de la plantilla</label>
                 <input id="nombre" name="nombre" value="{{ old('nombre', $plantilla->nombre) }}" required maxlength="100"
-                       class="form-control form-control-solid @error('nombre') is-invalid @enderror" placeholder="Por ejemplo: Reunión de entrega de notas">
+                       class="form-control form-control-solid @error('nombre') is-invalid @enderror" placeholder="Por ejemplo: Invitación a taller práctico">
                 @error('nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
-            <div class="col-md-3">
-                <label for="tipo_evento" class="required form-label fw-semibold">Para</label>
-                <select id="tipo_evento" name="tipo_evento" class="form-select form-select-solid">
-                    <option value="reunion" @selected(old('tipo_evento', $plantilla->tipo_evento) === 'reunion')>Reuniones</option>
-                    <option value="capacitacion" @selected(old('tipo_evento', $plantilla->tipo_evento) === 'capacitacion')>Capacitaciones</option>
-                </select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <input type="hidden" name="predeterminada" value="0">

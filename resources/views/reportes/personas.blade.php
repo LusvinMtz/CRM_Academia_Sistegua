@@ -11,7 +11,7 @@
                 'tipos' => ['cliente' => 'Clientes'],
                 'rutaExcel' => route('reportes.personas.excel', request()->query()),
                 'extra' => new \Illuminate\Support\HtmlString(
-                    '<div><label class="form-label fs-7 fw-semibold mb-1">Buscar</label><input type="text" name="buscar" value="'.e(request('buscar')).'" class="form-control form-control-sm form-control-solid" placeholder="Nombre o estudiante"></div>'),
+                    '<div><label class="form-label fs-7 fw-semibold mb-1">Buscar</label><input type="text" name="buscar" value="'.e(request('buscar')).'" class="form-control form-control-sm form-control-solid" placeholder="Nombre, DPI, empresa u oficio"></div>'),
             ])
         </div>
     </div>

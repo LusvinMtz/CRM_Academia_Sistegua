@@ -12,7 +12,7 @@
                 <label for="titulo" class="required form-label fw-semibold">Título</label>
                 <input id="titulo" name="titulo" value="{{ old('titulo', $evento->titulo) }}" required maxlength="150"
                        class="form-control form-control-solid @error('titulo') is-invalid @enderror"
-                       placeholder="{{ $esCapacitacion ? 'Por ejemplo: Evaluación por competencias' : 'Por ejemplo: Entrega de notas del segundo bimestre' }}">
+                       placeholder="Por ejemplo: Técnicas de instalación para contratistas">
                 @error('titulo') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
             <div class="col-md-4">
